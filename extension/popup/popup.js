@@ -922,7 +922,7 @@ function navigateField(delta) {
 function stopCurrentInteractions() {
   stopAudioPlayback();
   cancelVoiceCapture();
-  isAudioPlaying = false;
+  isAudioPlayingState = false; // FIXED: using the local state variable instead of the importaed function
   isVoiceCapturing = false;
   resetVoiceButtonUI();
   if (vadIndicator) {

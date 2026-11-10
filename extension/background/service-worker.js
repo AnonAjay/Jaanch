@@ -9,6 +9,14 @@ const IDLE_TIMEOUT_MINUTES = 30;
 // Central in-memory state hub for active tab fields
 let activeFieldsMap = {};
 
+// SPA Routing Fix (Dynamic Navigation)
+chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
+  chrome.tabs.sendMessage(details.tabId, { action: "route_changed" })
+  .catch((error) => {
+    console.log("[Jaanch] Content script not ready for route change yet:", error);
+  });
+});
+
 // Enable content scripts to read and write chrome.storage.session directly (MV3)
 function configureSessionAccess() {
   if (typeof chrome !== "undefined" && chrome.storage?.session?.setAccessLevel) {

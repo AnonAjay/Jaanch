@@ -979,38 +979,53 @@
   }
 
   // Lifecycle initialization
+  // Lifecycle initialization
   function init() {
-    clearJaanchOverlays();
-    discoverFields();
-    injectRecheckButton();
-    attachSubmitWipers();
+      clearJaanchOverlays();
+      discoverFields();
+      injectRecheckButton();
+      attachSubmitWipers();
 
-    // Runtime message listener for field extraction, DOM apply, and modal toggle
-    if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
-      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        if (message.type === "GET_DISCOVERED_FIELDS") {
-          const found = discoverFields();
-          sendResponse({ fields: found || {} });
-          return false;
-        }
-        if (message.type === "APPLY_FIELD_UPDATES") {
-          const count = applyFieldUpdates(message.fields);
-          sendResponse({ ok: true, count });
-          return false;
-        }
-        if (message.type === "TOGGLE_TOP_DROPDOWN") {
-          toggleTopFloatingDropdown();
-          sendResponse({ ok: true });
-          return false;
-        }
-        if (message.type === "CLOSE_TOP_DROPDOWN") {
-          const existing = document.getElementById("jaanch-dropdown-root");
-          if (existing) existing.remove();
-          sendResponse({ ok: true });
-          return false;
-        }
-      });
-    }
+      // Runtime message listener for field extraction, DOM apply, and modal toggle
+      if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
+          chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            
+              // --- NEW SPA ROUTING FIX ---
+              if (message.action === "route_changed") {
+                  console.log("[Jaanch] Route change detected. Re-scanning...");
+                  setTimeout(() => {
+                      discoverFields();
+                      injectRecheckButton();
+                      attachSubmitWipers();
+                  }, 800);
+                  sendResponse({ ok: true });
+                  return false;
+              }
+              // ---------------------------
+
+              if (message.type === "GET_DISCOVERED_FIELDS") {
+                  const found = discoverFields();
+                  sendResponse({ fields: found || {} });
+                  return false;
+              }
+              if (message.type === "APPLY_FIELD_UPDATES") {
+                  const count = applyFieldUpdates(message.fields);
+                  sendResponse({ ok: true, count });
+                  return false;
+              }
+              if (message.type === "TOGGLE_TOP_DROPDOWN") {
+                  toggleTopFloatingDropdown();
+                  sendResponse({ ok: true });
+                  return false;
+              }
+              if (message.type === "CLOSE_TOP_DROPDOWN") {
+                  const existing = document.getElementById("jaanch-dropdown-root");
+                  if (existing) existing.remove();
+                  sendResponse({ ok: true });
+                  return false;
+              }
+          });
+      }
   }
 
   if (typeof document !== "undefined") {
