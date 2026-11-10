@@ -105,7 +105,7 @@ test("Dedicated Settings Page: Standalone configuration page with permissions & 
   assert.ok(html.includes('id="select-language"'), "Must have preferred language select dropdown");
 
   // Section 3: AI Models & Voice
-  assert.ok(html.includes("Gnani Prisma v3.0"), "Must state Gnani Prisma v3.0 STT");
+  assert.ok(html.includes("Gnani Prisma v2.5"), "Must state Gnani Prisma v2.5 STT");
   assert.ok(html.includes('id="select-voice"'), "Must have voice persona selection");
   assert.ok(html.includes('id="btn-preview-voice"'), "Must have voice preview button");
 

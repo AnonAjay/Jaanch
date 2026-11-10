@@ -13,7 +13,7 @@ import { compareDates, compareDigits, compareName, compareDistrict } from "../li
 import { classifyReply } from "../lib/intents.js";
 import { tokenizeNameForReadback, tokenizeDigitsForReadback, tokenizeDateForReadback } from "../lib/spell.js";
 import { playTTSPhrase, stopAudioPlayback, isAudioPlaying, resumeAudioContext } from "../lib/audio-player.js";
-import { startContinuousListening, pauseContinuousListening, resumeContinuousListening, cancelVoiceCapture, startVoiceCapture } from "../lib/vad.js";
+import { startContinuousListening, pauseContinuousListening, resumeContinuousListening, cancelVoiceCapture, startVoiceCapture, resumeVadAudioContext, isContinuousListeningActive } from "../lib/vad.js";
 
 // State
 let fields = [];
@@ -120,6 +120,12 @@ document.addEventListener("DOMContentLoaded", () => {
   loadInitialState();
   checkProxyHealth();
   listenToSessionStorage();
+
+  // One-time click listener to wake up suspended AudioContexts on first user gesture
+  document.body.addEventListener("click", () => {
+    resumeAudioContext();
+    resumeVadAudioContext();
+  }, { once: true });
 });
 
 // Refresh fields whenever popup gains focus
@@ -254,6 +260,7 @@ function setupNavigationHandlers() {
   });
   btnVoiceToggle?.addEventListener("click", () => {
     resumeAudioContext();
+    resumeVadAudioContext();
     toggleVoiceRecording();
   });
 
@@ -873,6 +880,11 @@ function renderCurrentField() {
   } else {
     heardContainer?.classList.add("hidden");
   }
+
+  // Automatically prime continuous listening when viewing a field
+  if (!isMicPaused) {
+    ensureContinuousListening();
+  }
 }
 
 function formatStatus(status) {
@@ -922,6 +934,7 @@ function navigateField(delta) {
 function stopCurrentInteractions() {
   stopAudioPlayback();
   cancelVoiceCapture();
+  continuousController = null;
   isAudioPlayingState = false; // FIXED: using the local state variable instead of the importaed function
   isVoiceCapturing = false;
   resetVoiceButtonUI();
@@ -963,12 +976,23 @@ function getFieldSpeechPhrase(field) {
 /**
  * Ensures continuous background listening is active with instant barge-in
  */
-async function ensureContinuousListening() {
-  if (continuousController || isMicPaused) return;
+async function ensureContinuousListening(force = false) {
+  if (isMicPaused) return;
+  if (!force && continuousController && isContinuousListeningActive()) return;
 
   try {
     continuousController = await startContinuousListening({
       isAudioPlayingRef: () => isAudioPlaying(),
+      onLevelChange: (rms) => {
+        // Visual feedback when sound enters the mic
+        if (rms > 0.008 && !isVoiceCapturing) {
+          voiceWaveBars?.classList.remove("hidden");
+          voiceIconPlay?.classList.add("hidden");
+        } else if (rms <= 0.008 && !isVoiceCapturing) {
+          voiceWaveBars?.classList.add("hidden");
+          voiceIconPlay?.classList.remove("hidden");
+        }
+      },
       onSpeechStart: () => {
         // INSTANT BARGE-IN: Immediately silence the speaker when citizen speaks!
         stopAudioPlayback();
@@ -992,7 +1016,7 @@ async function ensureContinuousListening() {
         voiceIconStop?.classList.add("hidden");
         if (voiceBtnSub) voiceBtnSub.textContent = "Auto";
         if (vadIndicator) {
-          vadIndicator.textContent = "Processing with Gnani... (जाँच जारी है)";
+          vadIndicator.textContent = "Processing reply... (जाँच जारी है)";
           vadIndicator.className = "vad-indicator idle";
         }
 
@@ -1004,6 +1028,10 @@ async function ensureContinuousListening() {
     btnVoiceToggle?.classList.remove("recording");
   } catch (err) {
     console.warn("[Jaanch Mic] Continuous mic init:", err?.message);
+    if (vadIndicator) {
+      vadIndicator.textContent = "⚠️ Mic Blocked! Click browser address bar icon to allow.";
+      vadIndicator.className = "vad-indicator speaking";
+    }
   }
 }
 
@@ -1046,30 +1074,95 @@ async function speakCurrentField() {
 /**
  * Voice Capture Toggle Button: Toggles Pause / Auto Listening
  */
-function toggleVoiceRecording() {
-  if (!continuousController) {
-    ensureContinuousListening();
-    return;
-  }
+async function toggleVoiceRecording() {
+  resumeAudioContext();
+  resumeVadAudioContext();
 
   if (isMicPaused) {
     isMicPaused = false;
     resumeContinuousListening();
-    if (voiceBtnSub) voiceBtnSub.textContent = "Auto";
     btnVoiceToggle?.classList.remove("muted");
-    if (vadIndicator) vadIndicator.textContent = "Listening for reply... (सुन रहे हैं)";
+    if (voiceBtnSub) voiceBtnSub.textContent = "Listening";
+    if (vadIndicator) {
+      vadIndicator.textContent = "Listening for reply... Speak now (बोलिए)";
+      vadIndicator.className = "vad-indicator idle";
+    }
+    await ensureContinuousListening(true);
+    return;
+  }
+
+  // If not currently capturing or suspended, actively prime/arm listening
+  if (!continuousController || !isContinuousListeningActive()) {
+    isMicPaused = false;
+    btnVoiceToggle?.classList.remove("muted");
+    if (voiceBtnSub) voiceBtnSub.textContent = "Listening";
+    if (vadIndicator) {
+      vadIndicator.textContent = "Listening for reply... Speak now (बोलिए)";
+      vadIndicator.className = "vad-indicator idle";
+    }
+    await ensureContinuousListening(true);
   } else {
+    // Already actively capturing: clicking again toggles pause
     isMicPaused = true;
     pauseContinuousListening();
     stopAudioPlayback();
     if (voiceBtnSub) voiceBtnSub.textContent = "Paused";
     btnVoiceToggle?.classList.add("muted");
-    if (vadIndicator) vadIndicator.textContent = "Microphone paused.";
+    if (vadIndicator) {
+      vadIndicator.textContent = "Microphone paused. Click Auto to resume.";
+      vadIndicator.className = "vad-indicator idle";
+    }
   }
 }
 
 async function listenForCustomerReply() {
-  ensureContinuousListening();
+  ensureContinuousListening(true);
+}
+
+/**
+ * Extracts candidate spoken value from transcript for comparison against filled answer
+ */
+function extractCandidateForField(transcript, kind) {
+  if (!transcript) return null;
+  const k = (kind || "").toLowerCase();
+
+  if (k === "digits") {
+    const norm = normalizeDigits(transcript);
+    return norm && norm.length >= 2 ? norm : null;
+  }
+
+  if (k === "date") {
+    const ascii = devanagariToAscii(transcript);
+    const numMatch = ascii.match(/\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})\b/);
+    if (numMatch) return numMatch[1];
+
+    const textMatch = ascii.match(/\b(\d{1,2}\s+[A-Za-z\u0900-\u097F]+\s+\d{4})\b/);
+    if (textMatch) return textMatch[1];
+
+    const parsed = parseDate(transcript);
+    if (parsed) return parsed.formatted;
+    return null;
+  }
+
+  if (k === "name") {
+    const clean = transcript
+      .replace(/(?:mera\s+naam|meri\s+naam|naam|mera|meri|hai|hain|tha|thi|the|bhai|ji|sahab|sir|madam|sahi|galat|nahi|nahin|shri|smt|mr|mrs|miss|dr)\b/gi, "")
+      .replace(/[,\.\-\/\\:;!?'"()]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return clean || null;
+  }
+
+  if (k === "district") {
+    const clean = transcript
+      .replace(/(?:district|zilla|zila|shehar|city|hai|hain|mera|meri|ji|sahab|sahi|galat|nahi|nahin)\b/gi, "")
+      .replace(/[,\.\-\/\\:;!?'"()]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return clean || null;
+  }
+
+  return null;
 }
 
 async function processAudioReply(wavBlob) {
@@ -1095,14 +1188,20 @@ async function processAudioReply(wavBlob) {
 
     if (resp.ok) {
       const data = await resp.json();
-      transcript = data.transcript || "";
+      transcript = (data.transcript || "").trim();
     } else {
       console.warn(`[Jaanch Audio Debug] STT HTTP ${resp.status}`);
-      transcript = "हाँ सही है";
     }
   } catch (e) {
-    console.warn(`[Jaanch Audio Debug] STT error/timeout (${e?.message}), using fallback.`);
-    transcript = "हाँ सही है";
+    console.warn(`[Jaanch Audio Debug] STT error/timeout (${e?.message})`);
+  }
+
+  if (!transcript) {
+    if (vadIndicator) {
+      vadIndicator.textContent = "Speech heard, but server returned no text. Tap (✔) or (✖) to decide.";
+      vadIndicator.className = "vad-indicator idle";
+    }
+    return;
   }
 
   // Deterministic intent classification
@@ -1114,14 +1213,33 @@ async function processAudioReply(wavBlob) {
   current.heardTranscript = transcript;
   current.intent = classification.intent;
 
+  const kind = (current.kind || "").toLowerCase();
+  const filledVal = (current.value || "").trim();
+
+  // 1. Repeat request
+  if (classification.intent === "repeat") {
+    if (vadIndicator) vadIndicator.textContent = "Repeating prompt (पुनः सुनिए)...";
+    setTimeout(() => speakCurrentField(), 500);
+    return;
+  }
+
+  // 2. Hold request
+  if (classification.intent === "hold") {
+    if (vadIndicator) vadIndicator.textContent = "Hold requested (रुके हैं)... Tap Auto or speak when ready.";
+    return;
+  }
+
+  // 3. Explicit Confirmation (e.g. "हाँ सही है", "yes", "correct")
   if (classification.intent === "confirm") {
     current.status = "match";
     current.pendingCorrection = null;
-    if (vadIndicator) vadIndicator.textContent = "Confirmed! Value matches (सत्यापित).";
     saveFieldsToSession();
     renderCurrentField();
+    if (vadIndicator) {
+      vadIndicator.textContent = "Confirmed! Value matches (सत्यापित).";
+      vadIndicator.className = "vad-indicator idle";
+    }
 
-    // Debounced single-advance to next field after confirmation
     autoAdvanceTimer = setTimeout(() => {
       autoAdvanceTimer = null;
       if (currentFieldIndex < fields.length - 1) {
@@ -1131,32 +1249,175 @@ async function processAudioReply(wavBlob) {
         switchScreen("screen-summary");
       }
     }, 700);
+    return;
+  }
 
-  } else if (classification.intent === "reject") {
-    if (classification.new_value) {
-      current.pendingCorrection = classification.new_value;
-      current.status = "mismatch";
-      if (vadIndicator) vadIndicator.textContent = `Correction extracted: ${classification.new_value}`;
+  // 4. Candidate value comparison against filled answer
+  let candidateValue = classification.new_value;
+  if (!candidateValue) {
+    candidateValue = extractCandidateForField(transcript, kind);
+  }
+
+  if (kind === "digits" && candidateValue) {
+    const comp = compareDigits(filledVal, candidateValue);
+    if (comp.status === "match") {
+      current.status = "match";
+      current.pendingCorrection = null;
+      saveFieldsToSession();
+      renderCurrentField();
+      if (vadIndicator) {
+        vadIndicator.textContent = `Match! Spoken digits ${comp.normB} verify filled answer (सत्यापित).`;
+        vadIndicator.className = "vad-indicator idle";
+      }
+      autoAdvanceTimer = setTimeout(() => {
+        autoAdvanceTimer = null;
+        if (currentFieldIndex < fields.length - 1) {
+          navigateField(1);
+          speakCurrentField();
+        } else {
+          switchScreen("screen-summary");
+        }
+      }, 700);
+      return;
     } else {
       current.status = "mismatch";
-      current.pendingCorrection = null;
-      if (vadIndicator) vadIndicator.textContent = "Customer reported error. Ask again for correction.";
+      current.pendingCorrection = comp.normB;
+      saveFieldsToSession();
+      renderCurrentField();
+      if (vadIndicator) {
+        vadIndicator.textContent = `Mismatch! Spoken: ${comp.normB} vs Filled: ${filledVal}`;
+        vadIndicator.className = "vad-indicator speaking";
+      }
+      return;
     }
+  }
+
+  if (kind === "date" && candidateValue) {
+    const comp = compareDates(filledVal, candidateValue);
+    if (comp.status === "match") {
+      current.status = "match";
+      current.pendingCorrection = null;
+      saveFieldsToSession();
+      renderCurrentField();
+      if (vadIndicator) {
+        vadIndicator.textContent = `Match! Spoken date ${comp.parsedB.formatted} verifies filled answer (सत्यापित).`;
+        vadIndicator.className = "vad-indicator idle";
+      }
+      autoAdvanceTimer = setTimeout(() => {
+        autoAdvanceTimer = null;
+        if (currentFieldIndex < fields.length - 1) {
+          navigateField(1);
+          speakCurrentField();
+        } else {
+          switchScreen("screen-summary");
+        }
+      }, 700);
+      return;
+    } else if (comp.status === "mismatch") {
+      const swapped = comp.reason === "day_month_swapped" ? " (Day/month swapped!)" : "";
+      const displayVal = comp.parsedB?.formatted || candidateValue;
+      current.status = "mismatch";
+      current.pendingCorrection = displayVal;
+      saveFieldsToSession();
+      renderCurrentField();
+      if (vadIndicator) {
+        vadIndicator.textContent = `Mismatch! Spoken: ${displayVal} vs Filled: ${filledVal}${swapped}`;
+        vadIndicator.className = "vad-indicator speaking";
+      }
+      return;
+    }
+  }
+
+  if (kind === "name" && candidateValue) {
+    const comp = compareName(filledVal, candidateValue);
+    if (comp.status === "match") {
+      current.status = "match";
+      current.pendingCorrection = null;
+      saveFieldsToSession();
+      renderCurrentField();
+      if (vadIndicator) {
+        vadIndicator.textContent = `Match! Spoken name "${comp.cleanB}" verifies filled answer (सत्यापित).`;
+        vadIndicator.className = "vad-indicator idle";
+      }
+      autoAdvanceTimer = setTimeout(() => {
+        autoAdvanceTimer = null;
+        if (currentFieldIndex < fields.length - 1) {
+          navigateField(1);
+          speakCurrentField();
+        } else {
+          switchScreen("screen-summary");
+        }
+      }, 700);
+      return;
+    } else if (comp.status === "mismatch") {
+      current.status = "mismatch";
+      current.pendingCorrection = comp.cleanB;
+      saveFieldsToSession();
+      renderCurrentField();
+      if (vadIndicator) {
+        vadIndicator.textContent = `Mismatch! Spoken: "${comp.cleanB}" vs Filled: "${filledVal}"`;
+        vadIndicator.className = "vad-indicator speaking";
+      }
+      return;
+    }
+  }
+
+  if (kind === "district" && candidateValue) {
+    const comp = compareDistrict(filledVal, candidateValue);
+    if (comp.status === "match") {
+      current.status = "match";
+      current.pendingCorrection = null;
+      saveFieldsToSession();
+      renderCurrentField();
+      if (vadIndicator) {
+        vadIndicator.textContent = `Match! Spoken district "${comp.cleanB}" verifies filled answer (सत्यापित).`;
+        vadIndicator.className = "vad-indicator idle";
+      }
+      autoAdvanceTimer = setTimeout(() => {
+        autoAdvanceTimer = null;
+        if (currentFieldIndex < fields.length - 1) {
+          navigateField(1);
+          speakCurrentField();
+        } else {
+          switchScreen("screen-summary");
+        }
+      }, 700);
+      return;
+    } else if (comp.status === "mismatch") {
+      current.status = "mismatch";
+      current.pendingCorrection = comp.cleanB;
+      saveFieldsToSession();
+      renderCurrentField();
+      if (vadIndicator) {
+        vadIndicator.textContent = `Mismatch! Spoken: "${comp.cleanB}" vs Filled: "${filledVal}"`;
+        vadIndicator.className = "vad-indicator speaking";
+      }
+      return;
+    }
+  }
+
+  // 5. Citizen reported error without candidate value (e.g. "नहीं", "गलत है")
+  if (classification.intent === "reject") {
+    current.status = "mismatch";
+    current.pendingCorrection = null;
     saveFieldsToSession();
     renderCurrentField();
+    if (vadIndicator) {
+      vadIndicator.textContent = "Customer reported error (गलत है). Please speak correction or tap Cross (✖).";
+      vadIndicator.className = "vad-indicator speaking";
+    }
+    return;
+  }
 
-  } else if (classification.intent === "repeat") {
-    if (vadIndicator) vadIndicator.textContent = "Repeating prompt (पुनः सुनिए)...";
-    setTimeout(() => speakCurrentField(), 500);
-
-  } else {
-    current.status = "unsure";
-    if (vadIndicator) vadIndicator.textContent = "Unclear reply. Operator may confirm or ask again.";
-    saveFieldsToSession();
-    renderCurrentField();
+  // 6. Unclear reply
+  current.status = "unsure";
+  saveFieldsToSession();
+  renderCurrentField();
+  if (vadIndicator) {
+    vadIndicator.textContent = `Heard: "${transcript}". Unclear reply. Tap Tick (✔) or Cross (✖) to decide.`;
+    vadIndicator.className = "vad-indicator idle";
   }
 }
-
 function handleFieldDecision(type) {
   const current = fields[currentFieldIndex];
   if (!current) return;
@@ -1192,6 +1453,20 @@ function handleFieldDecision(type) {
     current.status = "mismatch";
     saveFieldsToSession();
     renderCurrentField();
+
+    // FIX: Advance to the next field when the operator clicks the Cross button
+    if (currentFieldIndex < fields.length - 1) {
+      autoAdvanceTimer = setTimeout(() => {
+        autoAdvanceTimer = null;
+        navigateField(1);
+        speakCurrentField();
+      }, 350);
+    } else {
+      autoAdvanceTimer = setTimeout(() => {
+        autoAdvanceTimer = null;
+        switchScreen("screen-summary");
+      }, 500);
+    }
 
   } else if (type === "ask_again") {
     current.status = "not_checked";

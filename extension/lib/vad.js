@@ -6,6 +6,7 @@
  */
 
 let mediaStream = null;
+let mediaStreamSource = null;
 let audioContext = null;
 let scriptProcessor = null;
 let analyserNode = null;
@@ -98,7 +99,7 @@ export async function startContinuousListening(options = {}) {
   continuousSpeechActive = false;
   continuousBuffer = [];
 
-  if (!mediaStream) {
+  if (!mediaStream || !mediaStream.active || (mediaStream.getAudioTracks && mediaStream.getAudioTracks().every(t => t.readyState === "ended"))) {
     mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
@@ -113,13 +114,19 @@ export async function startContinuousListening(options = {}) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
   }
   if (audioContext.state === "suspended") {
-    await audioContext.resume();
+    try {
+      await audioContext.resume();
+    } catch (e) {
+      console.warn("[Jaanch VAD Debug] AudioContext resume failed:", e);
+    }
   }
 
-  const source = audioContext.createMediaStreamSource(mediaStream);
+  cleanUpAudioNodes();
+
+  mediaStreamSource = audioContext.createMediaStreamSource(mediaStream);
   analyserNode = audioContext.createAnalyser();
   analyserNode.fftSize = 512;
-  source.connect(analyserNode);
+  mediaStreamSource.connect(analyserNode);
 
   scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
 
@@ -129,11 +136,6 @@ export async function startContinuousListening(options = {}) {
     output.fill(0);
 
     if (!continuousActive || isPaused) return;
-
-    // Echo Protection: Stop listening while a clip plays, and start only after its ended event!
-    if (isAudioPlayingRef()) {
-      return;
-    }
 
     const input = e.inputBuffer.getChannelData(0);
 
@@ -145,13 +147,16 @@ export async function startContinuousListening(options = {}) {
     const rms = Math.sqrt(sum / input.length);
     onLevelChange(rms);
 
-    const baseThreshold = 0.026;
+    // Dynamic sensitivity: If TTS is actively speaking, require higher threshold (0.035) for barge-in cutoff
+    // When idle/listening, use sensitive threshold (0.008) so normal speaking volume is reliably detected
+    const isPlaying = isAudioPlayingRef();
+    const threshold = isPlaying ? 0.035 : 0.008;
 
-    if (rms > baseThreshold) {
+    if (rms > threshold) {
       if (!continuousSpeechActive) {
         continuousSpeechActive = true;
         continuousBuffer = [];
-        console.log(`[Jaanch VAD Debug] Human speech detected (RMS: ${rms.toFixed(4)}). Triggering onSpeechStart.`);
+        console.log(`[Jaanch VAD Debug] Human speech detected (RMS: ${rms.toFixed(4)} > ${threshold}). Triggering onSpeechStart.`);
         onSpeechStart(); // Instantly cuts off TTS!
       }
       if (continuousSilenceTimer) {
@@ -166,14 +171,14 @@ export async function startContinuousListening(options = {}) {
         continuousBuffer.push(resampled[i]);
       }
 
-      if (rms <= baseThreshold && !continuousSilenceTimer) {
+      if (rms <= threshold && !continuousSilenceTimer) {
         continuousSilenceTimer = setTimeout(() => {
           if (!continuousSpeechActive) return;
           continuousSpeechActive = false;
           continuousSilenceTimer = null;
 
-          // If utterance is >= 250ms, encode and deliver clean speech blob
-          if (continuousBuffer.length >= 4000) {
+          // If utterance is >= 150ms (2400 samples at 16kHz), deliver clean speech blob
+          if (continuousBuffer.length >= 2400) {
             const wavBlob = encode16kWavBlob(continuousBuffer);
             console.log(`[Jaanch VAD Debug] Speech utterance completed (${wavBlob.size} bytes). Delivering to Gnani STT.`);
             continuousBuffer = [];
@@ -186,7 +191,7 @@ export async function startContinuousListening(options = {}) {
     }
   };
 
-  source.connect(scriptProcessor);
+  mediaStreamSource.connect(scriptProcessor);
   scriptProcessor.connect(audioContext.destination);
 
   return {
@@ -200,6 +205,7 @@ export async function startContinuousListening(options = {}) {
       isPaused = false;
       continuousSpeechActive = false;
       continuousBuffer = [];
+      resumeVadAudioContext();
     },
     stop: () => {
       continuousActive = false;
@@ -219,6 +225,25 @@ export function resumeContinuousListening() {
   isPaused = false;
   continuousSpeechActive = false;
   continuousBuffer = [];
+  resumeVadAudioContext();
+}
+
+/**
+ * Explicitly resumes the VAD's internal AudioContext if suspended by Chrome autoplay policy.
+ */
+export function resumeVadAudioContext() {
+  if (typeof window === "undefined") return;
+  try {
+    if (audioContext && audioContext.state === "suspended") {
+      audioContext.resume().then(() => {
+        console.log("[Jaanch VAD Debug] VAD AudioContext resumed successfully.");
+      }).catch((e) => {
+        console.warn("[Jaanch VAD Debug] Failed to resume VAD AudioContext:", e);
+      });
+    }
+  } catch (e) {
+    console.warn("[Jaanch VAD Debug] Error resuming VAD AudioContext:", e);
+  }
 }
 
 /**
@@ -247,10 +272,10 @@ export async function startVoiceCapture(options = {}) {
     await audioContext.resume();
   }
 
-  const source = audioContext.createMediaStreamSource(mediaStream);
+  mediaStreamSource = audioContext.createMediaStreamSource(mediaStream);
   analyserNode = audioContext.createAnalyser();
   analyserNode.fftSize = 512;
-  source.connect(analyserNode);
+  mediaStreamSource.connect(analyserNode);
 
   scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
   pcmSamples = [];
@@ -309,7 +334,7 @@ export async function startVoiceCapture(options = {}) {
       }
     };
 
-    source.connect(scriptProcessor);
+    mediaStreamSource.connect(scriptProcessor);
     scriptProcessor.connect(audioContext.destination);
   });
 }
@@ -335,6 +360,10 @@ export function cancelVoiceCapture() {
   cleanUpAudioNodes();
 }
 
+export function isContinuousListeningActive() {
+  return continuousActive && !isPaused && scriptProcessor !== null && audioContext !== null && audioContext.state === "running";
+}
+
 function cleanUpAudioNodes() {
   if (scriptProcessor) {
     try { scriptProcessor.disconnect(); } catch (e) {}
@@ -343,5 +372,9 @@ function cleanUpAudioNodes() {
   if (analyserNode) {
     try { analyserNode.disconnect(); } catch (e) {}
     analyserNode = null;
+  }
+  if (mediaStreamSource) {
+    try { mediaStreamSource.disconnect(); } catch (e) {}
+    mediaStreamSource = null;
   }
 }

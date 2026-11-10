@@ -86,7 +86,7 @@ class LiveGnaniAdapter(BaseSpeechAdapter):
 
         boundary = f"----JaanchBoundary{uuid.uuid4().hex}"
         fields = {
-            "model": "prisma-v3.0",
+            "model": os.environ.get("STT_MODEL", "prisma-v2.5"),
             "language_code": language_code,
             "format": "transcribe"
         }
@@ -138,7 +138,7 @@ class LiveGnaniAdapter(BaseSpeechAdapter):
         payload_data = {
             "text": text,
             "voice": voice,
-            "model": "timbre-v3.0",
+            "model": os.environ.get("TTS_MODEL", "timbre-v2.5"),
             "language": "hi-IN",
             "speed": max(0.75, min(1.5, speed))
         }

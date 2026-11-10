@@ -1,6 +1,6 @@
 /**
  * Jaanch Audio Player Library (extension/lib/audio-player.js)
- * Coordinates Web Audio playback of fluent natural TTS phrases (Gnani Timbre v3.0 / Web Speech API)
+ * Coordinates Web Audio playback of fluent natural TTS phrases (Gnani Timbre v2.5 / Web Speech API)
  * with instant barge-in cancellation and smart in-memory caching.
  * Zero external dependencies.
  */
@@ -99,18 +99,23 @@ export async function playTTSPhrase(text, options = {}) {
       utterance.rate = speed;
       currentUtterance = utterance;
 
-      utterance.onend = () => {
+      let safetyTimer = null;
+      const finish = () => {
+        if (safetyTimer) clearTimeout(safetyTimer);
         isPlaying = false;
         currentUtterance = null;
         onEnd();
         resolve();
       };
-      utterance.onerror = () => {
-        isPlaying = false;
-        currentUtterance = null;
-        onEnd();
-        resolve();
-      };
+
+      utterance.onend = finish;
+      utterance.onerror = finish;
+
+      // Chrome extension iframe safety: release isPlaying after at most 7s if onend fails to fire
+      safetyTimer = setTimeout(() => {
+        console.warn("[Jaanch Audio Player] SpeechSynthesis timeout safety release.");
+        finish();
+      }, 7000);
 
       window.speechSynthesis.speak(utterance);
     });

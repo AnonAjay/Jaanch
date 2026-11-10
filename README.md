@@ -50,7 +50,7 @@ Citizens often have low digital literacy or struggle to inspect small on-screen 
 +------------------------------------------------------------------------------+
 | Thin Stateless Proxy (FastAPI in Conda)                                      |
 |   - Holds Gnani API Key (never exposed to browser or client)                 |
-|   - Relays to Gnani Prisma STT (prisma-v3.0)                                 |
+|   - Relays to Gnani Prisma STT (prisma-v2.5)                                 |
 |   - Enforces 4500.0 credit cap & 40 req/session limit                        |
 |   - Logs HTTP status & latency only; NEVER logs transcripts or audio         |
 +---------------------------------------+--------------------------------------+
@@ -116,8 +116,8 @@ Evaluated on our synthetic benchmark suite ([`eval/cases/cases.json`](file:///d:
 
 ## 5. Gnani AI Models Used
 
-- **Gnani Prisma STT (`prisma-v3.0`)**: Real-time speech transcription of customer verbal feedback (`hi-IN`, `format=transcribe`).
-- **Gnani Timbre TTS (`timbre-v3.0`)**: Indic text-to-speech synthesis (voice `Shivani`, 48 kHz mono 16-bit WAV) used to generate the offline prompt dictionary.
+- **Gnani Prisma STT (`prisma-v2.5`)**: Real-time speech transcription of customer verbal feedback (`hi-IN`, `format=transcribe`).
+- **Gnani Timbre TTS (`timbre-v2.5`)**: Indic text-to-speech synthesis (voice `Shivani`, 48 kHz mono 16-bit WAV) used to generate the offline prompt dictionary.
 
 ---
 
@@ -241,6 +241,6 @@ node eval/run_eval.js
 
 - **Challenge**: The Great Indian AI Internship Challenge (gnani.ai)
 - **Hashtags**: `#GreatIndianAIInternshipChallenge` `#GnaniAI`
-- **Models**: Gnani Prisma STT (`prisma-v3.0`), Gnani Timbre TTS (`timbre-v3.0`)
+- **Models**: Gnani Prisma STT (`prisma-v2.5`), Gnani Timbre TTS (`timbre-v2.5`)
 - **Video Walkthrough**: 60-second shot list in [`video/SHOT_LIST.md`](file:///d:/Projects/Helper_Repo/Jaanch/video/SHOT_LIST.md)
 - **Social Posts**: Post drafts in [`docs/SUBMISSION.md`](file:///d:/Projects/Helper_Repo/Jaanch/docs/SUBMISSION.md)

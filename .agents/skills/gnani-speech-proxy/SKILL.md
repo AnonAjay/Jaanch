@@ -6,8 +6,8 @@ description: Use when building or testing the thin stateless proxy that holds Gn
 
 ## Facts (team Day-1 notes; confirm with one probe)
 - Base `https://api.vachana.ai`, header `X-API-Key-ID: <key>`.
-- STT `POST /stt/v3` multipart: `audio_file`, `model=prisma-v3.0`, `language_code` (`hi-IN`, `indic-auto`), `format=transcribe`. Hard limit 30 s; send 16 kHz mono 16-bit WAV of at most 25 s.
-- TTS `POST /api/v1/tts/inference` JSON: `text`, `voice` (Shivani or Avinash on v3.0), `model=timbre-v3.0`, `language=hi-IN`, `speed` 0.75 to 1.5. Response is raw PCM mono 16-bit 48 kHz: wrap in a 44-byte WAV header at 48 kHz.
+- STT `POST /stt/v3` multipart: `audio_file`, `model=prisma-v2.5`, `language_code` (`hi-IN`, `indic-auto`), `format=transcribe`. Hard limit 30 s; send 16 kHz mono 16-bit WAV of at most 25 s.
+- TTS `POST /api/v1/tts/inference` JSON: `text`, `voice` (Shivani or Avinash on v2.5), `model=timbre-v2.5`, `language=hi-IN`, `speed` 0.75 to 1.5. Response is raw PCM mono 16-bit 48 kHz: wrap in a 44-byte WAV header at 48 kHz.
 - Errors: 401 alert, no retry; 402 switch to sample mode; 403 alert; 429 and 5xx retry at most 3 times, base delay 1.5 s.
 
 ## WAV header (Python)

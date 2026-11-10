@@ -1,7 +1,7 @@
 # Proxy Component Notes (`proxy/`)
 
 ## Plain Language Overview
-The proxy is a thin, stateless FastAPI service that keeps Gnani API keys strictly on the server. It handles STT (Prisma v3.0) and TTS (Timbre v3.0), enforces credit caps and session quotas, and logs counts/latency without citizen data.
+The proxy is a thin, stateless FastAPI service that keeps Gnani API keys strictly on the server. It handles STT (Prisma v2.5) and TTS (Timbre v2.5), enforces credit caps and session quotas, and logs counts/latency without citizen data.
 
 ## Data Flow
 ```

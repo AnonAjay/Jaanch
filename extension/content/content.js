@@ -462,6 +462,7 @@
     const liveFields = discoverFields();
 
     const iframe = document.createElement("iframe");
+    iframe.setAttribute("allow", "microphone");
     const popupUrl = typeof chrome !== "undefined" && chrome.runtime?.getURL 
       ? chrome.runtime.getURL("popup/popup.html")
       : "../popup/popup.html";

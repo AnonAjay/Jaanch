@@ -14,7 +14,7 @@ We built Jaanch (जाँच): an accessible, voice-assisted verification compa
 
 When the operator opens Jaanch from the toolbar or the in-page Recheck trigger, the popup displays critical applicant fields and reads them in Hindi using on-device speech synthesis.
 
-The applicant confirms or corrects verbally in Hindi ("नहीं, 18 मार्च है"). Voice is transcribed with Gnani Prisma STT (prisma-v3.0) and evaluated locally using deterministic rules—zero LLMs, zero hallucinated replacements, and zero personal data emitted during readback.
+The applicant confirms or corrects verbally in Hindi ("नहीं, 18 मार्च है"). Voice is transcribed with Gnani Prisma STT (prisma-v2.5) and evaluated locally using deterministic rules—zero LLMs, zero hallucinated replacements, and zero personal data emitted during readback.
 
 Evaluation results on our 40 synthetic seeded-error cases:
 - 100% detection rate on seeded errors (digit swaps, day/month transpositions, spelling slips, wrong districts)
@@ -26,7 +26,7 @@ Watch the 60-second walkthrough video below!
 GitHub Repository: [Link to Repo]
 Demo Video: [Link to Video]
 
-Speech recognition uses Gnani.ai Prisma STT (v3.0); readback stays on-device.
+Speech recognition uses Gnani.ai Prisma STT (v2.5); readback stays on-device.
 
 #GreatIndianAIInternshipChallenge #GnaniAI @Gnani.ai
 ```
@@ -57,7 +57,7 @@ We built Jaanch (जाँच): a Chrome extension that reads back entered form 
 A browser-based voice verification extension that reads back critical form entries in clear, spelled-out Hindi and captures customer verbal confirmations to eliminate form-filling errors at cyber cafes and CSC stalls.
 
 ### Gnani Models Used
-- **Gnani Prisma STT (`prisma-v3.0`)**: Real-time Hindi speech-to-text transcription of customer verbal confirmations and corrections (`hi-IN`, `format=transcribe`).
+- **Gnani Prisma STT (`prisma-v2.5`)**: Real-time Hindi speech-to-text transcription of customer verbal confirmations and corrections (`hi-IN`, `format=transcribe`).
 - **Readback**: On-device Web Speech API; form values are not sent to a TTS service.
 
 ### Team Contributions

@@ -112,7 +112,7 @@ Updated: 2026-11-10T12:00:00+05:30
   - Integrated full settings features on the dedicated page:
     - Microphone permission grant & live Web Audio API frequency volume level meter (`#mic-meter-bar`).
     - Auto-detected form language pill and verification language selection dropdown.
-    - AI speech model specifications (Gnani Prisma v3.0 & Timbre v3.0) with voice persona selection (Shivani/Avinash) and audio preview.
+    - AI speech model specifications (Gnani Prisma v2.5 & Timbre v2.5) with voice persona selection (Shivani/Avinash) and audio preview.
     - Security & ephemeral session data wiping (`#btn-wipe-session`).
   - Header settings button `[ ⚙️ ]` and mic button in popup and side panel open the dedicated Settings options page via `chrome.runtime.openOptionsPage()`.
   - 43/43 unit tests passing and 100% benchmark score maintained.
@@ -240,7 +240,7 @@ Updated: 2026-11-10T12:00:00+05:30
       4. Auto-detected Form Language badge (`#detected-lang-pill`).
       5. Preferred Verification Language dropdown (`#select-language`).
       6. Cross-Script Normalizer (NFC Canonical Matching).
-      7. AI Speech Models (Gnani Prisma v3.0 STT & Gnani Timbre v3.0 TTS).
+      7. AI Speech Models (Gnani Prisma v2.5 STT & Gnani Timbre v2.5 TTS).
       8. Voice Persona picker (Shivani / Avinash) with live audio preview (`#btn-preview-voice`).
       9. Auto-Advancement on confirmation ("हाँ सही है").
       10. Submit button sticker anchor and 612px × 415px floating card window geometry.
@@ -260,6 +260,13 @@ Updated: 2026-11-10T12:00:00+05:30
     - STT timeout & race condition defense: Added `AbortSignal.timeout(6000)` on `/stt` fetch, and debounced `autoAdvanceTimer` to guarantee single-step advancement.
     - Comprehensive console logging: Added `[Jaanch Debug]`, `[Jaanch DOM Debug]`, `[Jaanch VAD Debug]`, and `[Jaanch Audio Debug]` logs across content script, vad, audio-player, and popup.
   - All 45 unit tests and full synthetic eval suite passing (100% detection rate, 0 false flags, 0 zero-tolerance violations).
+- Step 31: Mic Permission Delegation & AudioContext Autoplay Policy Fix:
+  - Added `iframe.setAttribute("allow", "microphone")` in `content.js` `toggleTopFloatingDropdown()` to ensure Chrome delegates mic access to the injected floating card iframe.
+  - Added `resumeVadAudioContext()` in `extension/lib/vad.js` and hooked into `resumeContinuousListening()` and controller resume.
+  - Added one-time `click` listener on `document.body` in `popup.js` to wake up both TTS and VAD AudioContexts on initial user gesture.
+  - Added `resumeVadAudioContext()` on "Auto" toggle in `toggleVoiceRecording()`.
+  - Added visible UI error notification on `#vad-indicator` when microphone capture is denied/blocked.
+  - Updated Gnani STT & TTS models to `prisma-v2.5` and `timbre-v2.5`.
 - Step 21: Orbital Path Lines Removed:
   - Removed circular path borders from `.orbit-layer-1`, `.orbit-layer-2`, and `.orbit-layer-3` (`border: none;`).
   - The words now float and revolve seamlessly in open space in their 3 concentric looped rings around the central green Jaanch core without any visible line or track behind them.
@@ -348,7 +355,7 @@ Updated: 2026-11-10T12:00:00+05:30
       4. Auto-detected Form Language badge (`#detected-lang-pill`).
       5. Preferred Verification Language dropdown (`#select-language`).
       6. Cross-Script Normalizer (NFC Canonical Matching).
-      7. AI Speech Models (Gnani Prisma v3.0 STT & Gnani Timbre v3.0 TTS).
+      7. AI Speech Models (Gnani Prisma v2.5 STT & Gnani Timbre v2.5 TTS).
       8. Voice Persona picker (Shivani / Avinash) with live audio preview (`#btn-preview-voice`).
       9. Auto-Advancement on confirmation ("हाँ सही है").
       10. Submit button sticker anchor and 612px × 415px floating card window geometry.
@@ -368,6 +375,13 @@ Updated: 2026-11-10T12:00:00+05:30
     - STT timeout & race condition defense: Added `AbortSignal.timeout(6000)` on `/stt` fetch, and debounced `autoAdvanceTimer` to guarantee single-step advancement.
     - Comprehensive console logging: Added `[Jaanch Debug]`, `[Jaanch DOM Debug]`, `[Jaanch VAD Debug]`, and `[Jaanch Audio Debug]` logs across content script, vad, audio-player, and popup.
   - All 45 unit tests and full synthetic eval suite passing (100% detection rate, 0 false flags, 0 zero-tolerance violations).
+- Step 31: Mic Permission Delegation & AudioContext Autoplay Policy Fix:
+  - Added `iframe.setAttribute("allow", "microphone")` in `content.js` `toggleTopFloatingDropdown()` to ensure Chrome delegates mic access to the injected floating card iframe.
+  - Added `resumeVadAudioContext()` in `extension/lib/vad.js` and hooked into `resumeContinuousListening()` and controller resume.
+  - Added one-time `click` listener on `document.body` in `popup.js` to wake up both TTS and VAD AudioContexts on initial user gesture.
+  - Added `resumeVadAudioContext()` on "Auto" toggle in `toggleVoiceRecording()`.
+  - Added visible UI error notification on `#vad-indicator` when microphone capture is denied/blocked.
+  - Updated Gnani STT & TTS models to `prisma-v2.5` and `timbre-v2.5`.
 
 ## In progress
 - Complete.
