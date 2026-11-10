@@ -1,0 +1,221 @@
+[
+  {
+    "id": "REPLY_01",
+    "transcript": "हाँ सही है",
+    "expected_intent": "confirm",
+    "expected_value": null,
+    "description": "Standard Hindi affirmation"
+  },
+  {
+    "id": "REPLY_02",
+    "transcript": "जी हाँ",
+    "expected_intent": "confirm",
+    "expected_value": null,
+    "description": "Respectful Hindi affirmation"
+  },
+  {
+    "id": "REPLY_03",
+    "transcript": "sahi hai",
+    "expected_intent": "confirm",
+    "expected_value": null,
+    "description": "Romanized Hindi affirmation"
+  },
+  {
+    "id": "REPLY_04",
+    "transcript": "theek hai",
+    "expected_intent": "confirm",
+    "expected_value": null,
+    "description": "Common colloquial affirmation"
+  },
+  {
+    "id": "REPLY_05",
+    "transcript": "bilkul sahi",
+    "expected_intent": "confirm",
+    "expected_value": null,
+    "description": "Strong affirmative"
+  },
+  {
+    "id": "REPLY_06",
+    "transcript": "nahi",
+    "expected_intent": "reject",
+    "expected_value": null,
+    "description": "Simple rejection without value"
+  },
+  {
+    "id": "REPLY_07",
+    "transcript": "galat hai",
+    "expected_intent": "reject",
+    "expected_value": null,
+    "description": "Rejection stating error without value"
+  },
+  {
+    "id": "REPLY_08",
+    "transcript": "sahi nahi hai",
+    "expected_intent": "reject",
+    "expected_value": null,
+    "description": "Rejection without value"
+  },
+  {
+    "id": "REPLY_09",
+    "transcript": "गलत है",
+    "expected_intent": "reject",
+    "expected_value": null,
+    "description": "Devanagari rejection without value"
+  },
+  {
+    "id": "REPLY_10",
+    "transcript": "nahi galat likha hai",
+    "expected_intent": "reject",
+    "expected_value": null,
+    "description": "Rejection without value"
+  },
+  {
+    "id": "REPLY_11",
+    "transcript": "nahi, 962081",
+    "expected_intent": "reject",
+    "expected_value": "962081",
+    "target_kind": "digits",
+    "description": "Rejection with numeric correction"
+  },
+  {
+    "id": "REPLY_12",
+    "transcript": "नहीं 458129",
+    "expected_intent": "reject",
+    "expected_value": "458129",
+    "target_kind": "digits",
+    "description": "Devanagari rejection with numeric correction"
+  },
+  {
+    "id": "REPLY_13",
+    "transcript": "galat hai, number 784312 hai",
+    "expected_intent": "reject",
+    "expected_value": "784312",
+    "target_kind": "digits",
+    "description": "Rejection with embedded number"
+  },
+  {
+    "id": "REPLY_14",
+    "transcript": "nahi 612948",
+    "expected_intent": "reject",
+    "expected_value": "612948",
+    "target_kind": "digits",
+    "description": "Short rejection with number"
+  },
+  {
+    "id": "REPLY_15",
+    "transcript": "nahi 331905",
+    "expected_intent": "reject",
+    "expected_value": "331905",
+    "target_kind": "digits",
+    "description": "Rejection with swapped digits value"
+  },
+  {
+    "id": "REPLY_16",
+    "transcript": "Sanjay nahi Ajay",
+    "expected_intent": "reject",
+    "expected_value": "Ajay",
+    "target_kind": "name",
+    "description": "Contrast correction (X nahi Y)"
+  },
+  {
+    "id": "REPLY_17",
+    "transcript": "Priya nahi Pooja",
+    "expected_intent": "reject",
+    "expected_value": "Pooja",
+    "target_kind": "name",
+    "description": "Contrast correction for name"
+  },
+  {
+    "id": "REPLY_18",
+    "transcript": "Amit nahi Sumit",
+    "expected_intent": "reject",
+    "expected_value": "Sumit",
+    "target_kind": "name",
+    "description": "Contrast correction"
+  },
+  {
+    "id": "REPLY_19",
+    "transcript": "Deepak nahi Dipak",
+    "expected_intent": "reject",
+    "expected_value": "Dipak",
+    "target_kind": "name",
+    "description": "Spelling contrast correction"
+  },
+  {
+    "id": "REPLY_20",
+    "transcript": "ek A lagao",
+    "expected_intent": "correct_instruction",
+    "expected_value": null,
+    "description": "Instruction to insert a letter"
+  },
+  {
+    "id": "REPLY_21",
+    "transcript": "A ki jagah E karo",
+    "expected_intent": "correct_instruction",
+    "expected_value": null,
+    "description": "Instruction to replace a letter"
+  },
+  {
+    "id": "REPLY_22",
+    "transcript": "ek H jodo",
+    "expected_intent": "correct_instruction",
+    "expected_value": null,
+    "description": "Instruction to add H"
+  },
+  {
+    "id": "REPLY_23",
+    "transcript": "space hatao",
+    "expected_intent": "correct_instruction",
+    "expected_value": null,
+    "description": "Instruction to remove space"
+  },
+  {
+    "id": "REPLY_24",
+    "transcript": "dobara bolo",
+    "expected_intent": "repeat",
+    "expected_value": null,
+    "description": "Request to repeat prompt"
+  },
+  {
+    "id": "REPLY_25",
+    "transcript": "phir se kahiye",
+    "expected_intent": "repeat",
+    "expected_value": null,
+    "description": "Polite request to repeat"
+  },
+  {
+    "id": "REPLY_26",
+    "transcript": "ruko",
+    "expected_intent": "hold",
+    "expected_value": null,
+    "description": "Request to hold"
+  },
+  {
+    "id": "REPLY_27",
+    "transcript": "ek minute ruko",
+    "expected_intent": "hold",
+    "expected_value": null,
+    "description": "Request to pause one minute"
+  },
+  {
+    "id": "REPLY_28",
+    "transcript": "",
+    "expected_intent": "unclear",
+    "expected_value": null,
+    "description": "Empty silence"
+  },
+  {
+    "id": "REPLY_29",
+    "transcript": "kuch samajh nahi aaya",
+    "expected_intent": "unclear",
+    "expected_value": null,
+    "description": "Ambiguous/confused statement"
+  },
+  {
+    "id": "REPLY_30",
+    "transcript": "shhh cough noise bla bla",
+    "expected_intent": "unclear",
+    "expected_value": null,
+    "description": "Ambient background noise"
+  }
+]

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jaanch - Gate A Spikes Dashboard</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .header {
+      background: #1e3a8a;
+      color: #fff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+    .header h1 { margin: 0 0 0.5rem 0; font-size: 1.5rem; }
+    .header p { margin: 0; opacity: 0.9; font-size: 0.9rem; }
+    .spike-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 600px) {
+      .spike-grid { grid-template-columns: 1fr; }
+    }
+    .spike-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .spike-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+    .spike-desc {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+    .spike-status {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+      width: fit-content;
+    }
+    .status-pass { background: #dcfce7; color: #15803d; }
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      text-align: center;
+      background: #2563eb;
+      color: #ffffff;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .btn:hover { background: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Jaanch: Gate A Proof-of-Concept Spikes</h1>
+    <p>Verification dashboard for core extension capabilities before component assembly.</p>
+  </div>
+
+  <div class="spike-grid">
+    <!-- Spike 1 -->
+    <div class="spike-card">
+      <div>
+        <div class="spike-title">Spike 1: Field Discovery</div>
+        <div class="spike-status status-pass">STATUS: PASS</div>
+        <div class="spike-desc">
+          Discovers 4 critical fields (Name, DOB, District, Ref No), classifies types, extracts labels, and listens for change events.
+        </div>
+      </div>
+      <a href="../tests/fixtures/standard_form.html" class="btn" target="_blank">Open Synthetic Fixture &rarr;</a>
+    </div>
+
+    <!-- Spike 2 -->
+    <div class="spike-card">
+      <div>
+        <div class="spike-title">Spike 2: Audio Playback &amp; Sync</div>
+        <div class="spike-status status-pass">STATUS: PASS</div>
+        <div class="spike-desc">
+          Validates user-gesture audio playback, letter-by-letter highlighting, and 250ms/400ms inter-token pauses.
+        </div>
+      </div>
+      <a href="spike2_audio_playback.html" class="btn" target="_blank">Test Audio &amp; Spelling &rarr;</a>
+    </div>
+
+    <!-- Spike 3 -->
+    <div class="spike-card">
+      <div>
+        <div class="spike-title">Spike 3: Mic Capture &amp; 16kHz WAV</div>
+        <div class="spike-status status-pass">STATUS: PASS</div>
+        <div class="spike-desc">
+          Captures live microphone stream, visualizes waveform &amp; RMS loudness, and encodes 16 kHz mono 16-bit WAV for STT.
+        </div>
+      </div>
+      <a href="spike3_mic_capture.html" class="btn" target="_blank">Test Microphone &amp; WAV &rarr;</a>
+    </div>
+
+    <!-- Spike 4 -->
+    <div class="spike-card">
+      <div>
+        <div class="spike-title">Spike 4: Proxy /health &amp; CORS</div>
+        <div class="spike-status status-pass">STATUS: PASS</div>
+        <div class="spike-desc">
+          Validates thin proxy /health and /budget contracts, CORS header exchange, and budget limits.
+        </div>
+      </div>
+      <span class="btn" style="background:#64748b;">Run: python spikes/spike4_test.py</span>
+    </div>
+  </div>
+</body>
+</html>

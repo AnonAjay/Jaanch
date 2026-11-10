@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jaanch (जाँच) - Browser Settings & Preferences</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body class="jaanch-settings-body">
+  <div class="settings-app-container">
+
+    <!-- ========================================================= -->
+    <!-- LEFT SIDEBAR SUBMENUS (WISPR FLOW STYLE)                 -->
+    <!-- ========================================================= -->
+    <aside class="settings-sidebar">
+      
+      <!-- Brand Header -->
+      <div class="sidebar-brand">
+        <div class="brand-logo-badge">जाँच</div>
+        <div class="brand-info">
+          <span class="brand-name">Jaanch</span>
+          <span class="brand-sub">Settings & Config</span>
+        </div>
+      </div>
+
+      <!-- Navigation Menus -->
+      <nav class="sidebar-nav">
+        <div class="nav-category-label">SETTINGS</div>
+        <button class="nav-item active" data-tab="tab-mic">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+          <span class="nav-label">Microphone & Voice</span>
+        </button>
+
+        <button class="nav-item" data-tab="tab-lang">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span class="nav-label">Language & Detection</span>
+        </button>
+
+        <button class="nav-item" data-tab="tab-models">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <span class="nav-label">AI Models & Speech</span>
+        </button>
+
+        <button class="nav-item" data-tab="tab-shortcuts">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <span class="nav-label">Shortcuts & Triggers</span>
+        </button>
+
+        <div class="nav-category-label">SYSTEM & DATA</div>
+        <button class="nav-item" data-tab="tab-privacy">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span class="nav-label">Security & Ephemeral Data</span>
+        </button>
+
+        <button class="nav-item" data-tab="tab-about">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span class="nav-label">About & Engine Status</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Footer Status -->
+      <div class="sidebar-footer">
+        <div class="status-indicator-row">
+          <span class="status-dot-live"></span>
+          <span class="status-text">Gnani Speech Proxy: Live</span>
+        </div>
+        <span class="app-version">Jaanch v0.1.0 (MV3)</span>
+      </div>
+    </aside>
+
+    <!-- ========================================================= -->
+    <!-- RIGHT CONTENT VIEWPORT (OCCUPYING THE WHOLE PAGE)        -->
+    <!-- ========================================================= -->
+    <main class="settings-content-viewport">
+      <div class="content-inner-scroll">
+
+        <!-- ===================================================== -->
+        <!-- TAB 1: MICROPHONE & VOICE INPUT                      -->
+        <!-- ===================================================== -->
+        <section id="tab-mic" class="tab-pane active">
+          <header class="section-title-header">
+            <h1 class="section-heading">Microphone & Voice Input</h1>
+            <p class="section-subtext">Manage microphone access, live volume metering, and voice input sensitivity.</p>
+          </header>
+
+          <div class="options-group-card">
+            <!-- Row 1: Mic Permission -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Microphone Access</span>
+                <span class="option-desc">Required for hands-free speech verification replies ("हाँ सही है", "नहीं", or digit corrections).</span>
+              </div>
+              <div class="option-action">
+                <span id="mic-status-chip" class="status-pill status-mint">Granted</span>
+                <button id="btn-request-mic" class="btn-action-primary">Allow Microphone Access</button>
+              </div>
+            </div>
+
+            <!-- Row 2: Live Test & Volume Meter -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Microphone Input Level & Test</span>
+                <span class="option-desc">Calibrate input volume and check background noise levels.</span>
+              </div>
+              <div class="option-action">
+                <button id="btn-test-mic" class="btn-action-secondary">Test Microphone</button>
+              </div>
+            </div>
+
+            <!-- Embedded Live Meter Row (Expandable on Test) -->
+            <div id="mic-meter-container" class="mic-meter-box hidden">
+              <div class="meter-info-row">
+                <span class="meter-title">Live Audio Volume Level:</span>
+                <span id="meter-level-val" class="meter-value">0%</span>
+              </div>
+              <div class="meter-track">
+                <div id="mic-meter-bar" class="meter-fill" style="width: 0%;"></div>
+              </div>
+              <div id="mic-feedback-msg" class="meter-feedback"></div>
+            </div>
+
+            <!-- Row 3: Voice Activity Detection (VAD) -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Continuous Background Listening</span>
+                <span class="option-desc">Local Energy Voice Activity Detection (VAD) with instant barge-in to stop playback on speech.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-soft">Active (Barge-in Enabled)</span>
+              </div>
+            </div>
+
+            <!-- Row 4: Zero-Data Guarantee Callout -->
+            <div class="option-row row-guarantee">
+              <div class="option-meta">
+                <span class="option-title">🔒 Zero-Data Retention Guarantee</span>
+                <span class="option-desc">Audio is encoded as local 16kHz mono WAV during verification and is never stored, retained, or logged to disk.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-mint">Air-Gapped Invariant</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <!-- TAB 2: LANGUAGE & DETECTION                           -->
+        <!-- ===================================================== -->
+        <section id="tab-lang" class="tab-pane hidden">
+          <header class="section-title-header">
+            <h1 class="section-heading">Language & Form Detection</h1>
+            <p class="section-subtext">Configure auto-detection of web form language and your preferred spoken read-back persona.</p>
+          </header>
+
+          <div class="options-group-card">
+            <!-- Row 1: Auto-Detected Form Language -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Auto-Detected Form Language</span>
+                <span class="option-desc">Scans field labels on the active web form to detect script (Devanagari vs Latin).</span>
+              </div>
+              <div class="option-action">
+                <span id="detected-lang-pill" class="status-pill status-mint">Hindi (हिंदी - hi-IN)</span>
+              </div>
+            </div>
+
+            <!-- Row 2: Preferred Language -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Preferred Verification Language</span>
+                <span class="option-desc">Select the language that citizens commonly speak at your kiosk or cyber cafe.</span>
+              </div>
+              <div class="option-action">
+                <select id="select-language" class="select-control">
+                  <option value="hi-IN" selected>Hindi (हिंदी - hi-IN)</option>
+                  <option value="en-IN">English (India - en-IN)</option>
+                  <option value="hi-Latn">Hinglish (Hindi in Roman Script)</option>
+                  <option value="bn-IN">Bengali (বাংলা - bn-IN)</option>
+                  <option value="mr-IN">Marathi (मराठी - mr-IN)</option>
+                  <option value="te-IN">Telugu (తెలుగు - te-IN)</option>
+                  <option value="ta-IN">Tamil (தமிழ் - ta-IN)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Row 3: Cross-Script Normalization -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Cross-Script Normalizer</span>
+                <span class="option-desc">Converts Devanagari numerals (०-९) and handles regional dates with zero hallucination.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-soft">NFC Canonical Matching</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <!-- TAB 3: AI SPEECH & READBACK MODELS                    -->
+        <!-- ===================================================== -->
+        <section id="tab-models" class="tab-pane hidden">
+          <header class="section-title-header">
+            <h1 class="section-heading">AI Models & Speech Engine</h1>
+            <p class="section-subtext">Speech recognition and natural neural voice settings powered by Gnani.ai.</p>
+          </header>
+
+          <div class="options-group-card">
+            <!-- Row 1: STT Model -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">STT Speech Model</span>
+                <span class="option-desc">Automatic Speech Recognition model for Hindi and Indic spoken reply classification.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-mint">Gnani Prisma v3.0</span>
+              </div>
+            </div>
+
+            <!-- Row 2: TTS Engine -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">TTS Readback Engine</span>
+                <span class="option-desc">Fluent neural phrase synthesis with zero-delay in-memory decoded audio caching.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-mint">Gnani Timbre v3.0</span>
+              </div>
+            </div>
+
+            <!-- Row 3: Voice Persona & Preview -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Voice Persona</span>
+                <span class="option-desc">Select the neural voice used for spoken field pronunciation and verification prompts.</span>
+              </div>
+              <div class="option-action-group">
+                <select id="select-voice" class="select-control">
+                  <option value="shivani" selected>Shivani (Female, Clear & Articulate)</option>
+                  <option value="avinash">Avinash (Male, Natural & Calm)</option>
+                </select>
+                <button id="btn-preview-voice" class="btn-action-secondary">🔊 Preview Voice</button>
+              </div>
+            </div>
+
+            <!-- Row 4: Auto-Advancement -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Auto-Advancement on Confirmation</span>
+                <span class="option-desc">Automatically advances to the next field within 400ms when citizen confirms "हाँ सही है".</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-soft">Enabled (400ms Delay)</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <!-- TAB 4: SHORTCUTS & TRIGGERS                           -->
+        <!-- ===================================================== -->
+        <section id="tab-shortcuts" class="tab-pane hidden">
+          <header class="section-title-header">
+            <h1 class="section-heading">Shortcuts & Interaction</h1>
+            <p class="section-subtext">Configure in-page sticker anchors, floating window dimensions, and keyboard controls.</p>
+          </header>
+
+          <div class="options-group-card">
+            <!-- Row 1: In-Page Sticker Button -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Submit Button Sticker Tab</span>
+                <span class="option-desc">Sleek [ जाँच → ] tab peeking from the top-right corner of the Submit button on any web form.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-mint">Active ([ जाँच → ])</span>
+              </div>
+            </div>
+
+            <!-- Row 2: In-Page Floating Window -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Assistant Window Geometry</span>
+                <span class="option-desc">Top-right floating card (612px × 415px) styled with sharp edges and dark green header.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-soft">612px × 415px Top-Right</span>
+              </div>
+            </div>
+
+            <!-- Row 3: Keyboard Shortcuts -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Keyboard Verification Hotkeys</span>
+                <span class="option-desc">Press Space/Enter for Match (✔), Backspace for Mismatch (✖), Esc to close dropdown.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-soft">Space / Enter / Esc</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <!-- TAB 5: SECURITY & EPHEMERAL DATA                     -->
+        <!-- ===================================================== -->
+        <section id="tab-privacy" class="tab-pane hidden">
+          <header class="section-title-header">
+            <h1 class="section-heading">Security & Session Isolation</h1>
+            <p class="section-subtext">Strict zero-data egress invariants and ephemeral session lifecycle management.</p>
+          </header>
+
+          <div class="options-group-card">
+            <!-- Row 1: Zero Egress Invariant -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Zero Customer Data Network Egress</span>
+                <span class="option-desc">Customer form values never leave the browser. Decision logic runs strictly locally via deterministic algorithms.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-mint">Core Invariant Enforced</span>
+              </div>
+            </div>
+
+            <!-- Row 2: 30-Minute Idle Auto-Wipe -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">30-Minute Idle Auto-Wipe</span>
+                <span class="option-desc">Temporary memory in chrome.storage.session is destroyed automatically after 30 minutes of inactivity.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-soft">30-Minute Idle Alarm</span>
+              </div>
+            </div>
+
+            <!-- Row 3: Manual Wipe Reset -->
+            <div class="option-row row-danger">
+              <div class="option-meta">
+                <span class="option-title">Manual Session Reset</span>
+                <span class="option-desc">Clear all active form field data, verification statuses, and cached audio buffers immediately.</span>
+              </div>
+              <div class="option-action">
+                <button id="btn-wipe-session" class="btn-action-danger">Wipe Session Data Now</button>
+              </div>
+            </div>
+
+            <div id="wipe-feedback" class="feedback-toast hidden"></div>
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <!-- TAB 6: ABOUT & SYSTEM STATUS                         -->
+        <!-- ===================================================== -->
+        <section id="tab-about" class="tab-pane hidden">
+          <header class="section-title-header">
+            <h1 class="section-heading">About & Engine Status</h1>
+            <p class="section-subtext">Integration diagnostics, local proxy health, and challenge compliance.</p>
+          </header>
+
+          <div class="options-group-card">
+            <!-- Row 1: Speech Proxy Health -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Local Speech Proxy Server</span>
+                <span class="option-desc">FastAPI thin proxy running at http://127.0.0.1:8000 with CORS protection and request budget capping.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-mint">HTTP 200 OK</span>
+              </div>
+            </div>
+
+            <!-- Row 2: Universal Live Portal Reach -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Universal Form Compatibility</span>
+                <span class="option-desc">Built for Google Forms, Microsoft Forms, and official Indian Government/NIC application portals.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-soft">Live Universal Mode</span>
+              </div>
+            </div>
+
+            <!-- Row 3: Challenge Version -->
+            <div class="option-row">
+              <div class="option-meta">
+                <span class="option-title">Extension Build Version</span>
+                <span class="option-desc">Jaanch (जाँच) v0.1.0 • Built for the Gnani.ai Voice AI Challenge.</span>
+              </div>
+              <div class="option-action">
+                <span class="status-pill status-soft">Release Build</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+
+  <script type="module" src="settings.js"></script>
+</body>
+</html>

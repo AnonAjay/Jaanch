@@ -1,0 +1,463 @@
+/* ===================================================================
+   JAANCH (जाँच) - FULL-PAGE SETTINGS & BROWSER PREFERENCES
+   Inspired by Wispr Flow's 2-Column Sidebar & Clean Option Rows
+   Palette:
+     Primary (Cream):     #FFF3E6
+     Secondary (Dark):    #1F3B3A
+     Button Accent:       #FF7E6B (Coral)
+     Pinch Accent 1:      #2FBF9B (Mint / Emerald)
+     Pinch Accent 2:      #A7E7D5 (Soft Aqua)
+   =================================================================== */
+
+:root {
+  --cream: #FFF3E6;
+  --dark-green: #1F3B3A;
+  --dark-green-sidebar: #172D2C;
+  --coral: #FF7E6B;
+  --mint: #2FBF9B;
+  --soft-aqua: #A7E7D5;
+  --text-dark: #1F3B3A;
+  --text-muted: #52796F;
+  --border-subtle: rgba(31, 59, 58, 0.1);
+  --card-bg: #FFFFFF;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body.jaanch-settings-body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--cream);
+  color: var(--text-dark);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===================================================================
+   APP CONTAINER (FULL SCREEN OCCUPIED)
+   =================================================================== */
+.settings-app-container {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ===================================================================
+   LEFT SIDEBAR (WISPR FLOW STYLE)
+   =================================================================== */
+.settings-sidebar {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+  height: 100vh;
+  background-color: var(--dark-green-sidebar);
+  color: var(--cream);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 28px 18px 24px 18px;
+  border-right: 1px solid rgba(167, 231, 213, 0.15);
+  user-select: none;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px 24px 8px;
+  border-bottom: 1px solid rgba(167, 231, 213, 0.12);
+}
+
+.brand-logo-badge {
+  font-size: 20px;
+  font-weight: 900;
+  background: var(--mint);
+  color: var(--dark-green);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(47, 191, 155, 0.3);
+  letter-spacing: 0.5px;
+}
+
+.brand-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: var(--cream);
+}
+
+.brand-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--soft-aqua);
+  opacity: 0.85;
+}
+
+/* Navigation List */
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.nav-category-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--soft-aqua);
+  opacity: 0.65;
+  letter-spacing: 1.2px;
+  padding: 12px 10px 6px 10px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--cream);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  stroke: var(--soft-aqua);
+  flex-shrink: 0;
+  transition: stroke 0.18s ease;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 243, 230, 0.08);
+  color: #FFFFFF;
+}
+
+.nav-item:hover .nav-icon {
+  stroke: var(--mint);
+}
+
+.nav-item.active {
+  background-color: rgba(47, 191, 155, 0.18);
+  color: var(--mint);
+  font-weight: 700;
+}
+
+.nav-item.active .nav-icon {
+  stroke: var(--mint);
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  padding-top: 16px;
+  border-top: 1px solid rgba(167, 231, 213, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 6px;
+}
+
+.status-indicator-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--soft-aqua);
+  font-weight: 600;
+}
+
+.status-dot-live {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--mint);
+  box-shadow: 0 0 8px rgba(47, 191, 155, 0.8);
+  display: inline-block;
+}
+
+.app-version {
+  font-size: 11px;
+  color: rgba(255, 243, 230, 0.45);
+}
+
+/* ===================================================================
+   RIGHT CONTENT VIEWPORT (OCCUPYING THE WHOLE PAGE)
+   =================================================================== */
+.settings-content-viewport {
+  flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  background-color: var(--cream);
+  padding: 48px 64px 80px 64px;
+}
+
+.content-inner-scroll {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* Header for Active Section */
+.section-title-header {
+  margin-bottom: 32px;
+}
+
+.section-heading {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--dark-green);
+  letter-spacing: -0.6px;
+  margin-bottom: 8px;
+}
+
+.section-subtext {
+  font-size: 14.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* ===================================================================
+   OPTIONS GROUP CARD & ROWS (WISPR FLOW STYLE)
+   =================================================================== */
+.options-group-card {
+  background-color: var(--card-bg);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(31, 59, 58, 0.04);
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+
+.option-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 28px;
+  transition: background-color 0.15s ease;
+}
+
+.option-row:last-child {
+  border-bottom: none;
+}
+
+.option-row:hover {
+  background-color: rgba(255, 243, 230, 0.25);
+}
+
+.option-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.option-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dark-green);
+  letter-spacing: -0.2px;
+}
+
+.option-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.option-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.option-action-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Pills & Badges */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.status-mint {
+  background: rgba(47, 191, 155, 0.14);
+  color: #176551;
+  border: 1px solid rgba(47, 191, 155, 0.6);
+}
+
+.status-soft {
+  background: rgba(167, 231, 213, 0.3);
+  color: var(--dark-green);
+  border: 1px solid rgba(31, 59, 58, 0.15);
+}
+
+/* Action Buttons */
+.btn-action-primary {
+  background: var(--dark-green);
+  color: var(--cream);
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(31, 59, 58, 0.2);
+}
+
+.btn-action-primary:hover {
+  background: var(--mint);
+  color: var(--dark-green);
+  transform: translateY(-1px);
+}
+
+.btn-action-secondary {
+  background: transparent;
+  color: var(--dark-green);
+  border: 1.5px solid var(--dark-green);
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-action-secondary:hover {
+  background: var(--dark-green);
+  color: var(--cream);
+}
+
+.btn-action-danger {
+  background: transparent;
+  color: var(--coral);
+  border: 1.5px solid var(--coral);
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-action-danger:hover {
+  background: var(--coral);
+  color: #FFFFFF;
+}
+
+/* Form Controls */
+.select-control {
+  background-color: var(--cream);
+  color: var(--dark-green);
+  border: 1.5px solid var(--dark-green);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  min-width: 220px;
+  transition: border-color 0.2s ease;
+}
+
+.select-control:focus {
+  border-color: var(--mint);
+  box-shadow: 0 0 0 2px rgba(47, 191, 155, 0.25);
+}
+
+/* Expandable Live Volume Meter Bar */
+.mic-meter-box {
+  background: var(--cream);
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  animation: fadeIn 0.2s ease;
+}
+
+.meter-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--dark-green);
+}
+
+.meter-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(31, 59, 58, 0.12);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--mint), var(--coral));
+  width: 0%;
+  transition: width 0.08s ease-out;
+}
+
+.meter-feedback {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.feedback-toast {
+  padding: 12px 24px;
+  background: var(--cream);
+  color: var(--dark-green);
+  font-size: 13px;
+  font-weight: 700;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Utilities */
+.hidden {
+  display: none !important;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

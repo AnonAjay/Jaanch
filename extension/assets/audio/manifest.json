@@ -1,0 +1,1102 @@
+{
+  "version": "1.0",
+  "format": "48000Hz_mono_pcm16_wav",
+  "sample_rate": 48000,
+  "channels": 1,
+  "bits_per_sample": 16,
+  "total_clips": 156,
+  "clips": {
+    "letter_A.wav": {
+      "category": "letters",
+      "token": "A",
+      "text": "A",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_B.wav": {
+      "category": "letters",
+      "token": "B",
+      "text": "B",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_C.wav": {
+      "category": "letters",
+      "token": "C",
+      "text": "C",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_D.wav": {
+      "category": "letters",
+      "token": "D",
+      "text": "D",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_E.wav": {
+      "category": "letters",
+      "token": "E",
+      "text": "E",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_F.wav": {
+      "category": "letters",
+      "token": "F",
+      "text": "F",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_G.wav": {
+      "category": "letters",
+      "token": "G",
+      "text": "G",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_H.wav": {
+      "category": "letters",
+      "token": "H",
+      "text": "H",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_I.wav": {
+      "category": "letters",
+      "token": "I",
+      "text": "I",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_J.wav": {
+      "category": "letters",
+      "token": "J",
+      "text": "J",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_K.wav": {
+      "category": "letters",
+      "token": "K",
+      "text": "K",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_L.wav": {
+      "category": "letters",
+      "token": "L",
+      "text": "L",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_M.wav": {
+      "category": "letters",
+      "token": "M",
+      "text": "M",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_N.wav": {
+      "category": "letters",
+      "token": "N",
+      "text": "N",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_O.wav": {
+      "category": "letters",
+      "token": "O",
+      "text": "O",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_P.wav": {
+      "category": "letters",
+      "token": "P",
+      "text": "P",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_Q.wav": {
+      "category": "letters",
+      "token": "Q",
+      "text": "Q",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_R.wav": {
+      "category": "letters",
+      "token": "R",
+      "text": "R",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_S.wav": {
+      "category": "letters",
+      "token": "S",
+      "text": "S",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_T.wav": {
+      "category": "letters",
+      "token": "T",
+      "text": "T",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_U.wav": {
+      "category": "letters",
+      "token": "U",
+      "text": "U",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_V.wav": {
+      "category": "letters",
+      "token": "V",
+      "text": "V",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_W.wav": {
+      "category": "letters",
+      "token": "W",
+      "text": "W",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_X.wav": {
+      "category": "letters",
+      "token": "X",
+      "text": "X",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_Y.wav": {
+      "category": "letters",
+      "token": "Y",
+      "text": "Y",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "letter_Z.wav": {
+      "category": "letters",
+      "token": "Z",
+      "text": "Z",
+      "duration_sec": 0.25,
+      "bytes": 24044
+    },
+    "digit_0.wav": {
+      "category": "digits",
+      "token": "0",
+      "text": "शून्य",
+      "duration_sec": 0.3,
+      "bytes": 28844
+    },
+    "digit_1.wav": {
+      "category": "digits",
+      "token": "1",
+      "text": "एक",
+      "duration_sec": 0.3,
+      "bytes": 28844
+    },
+    "digit_2.wav": {
+      "category": "digits",
+      "token": "2",
+      "text": "दो",
+      "duration_sec": 0.3,
+      "bytes": 28844
+    },
+    "digit_3.wav": {
+      "category": "digits",
+      "token": "3",
+      "text": "तीन",
+      "duration_sec": 0.3,
+      "bytes": 28844
+    },
+    "digit_4.wav": {
+      "category": "digits",
+      "token": "4",
+      "text": "चार",
+      "duration_sec": 0.3,
+      "bytes": 28844
+    },
+    "digit_5.wav": {
+      "category": "digits",
+      "token": "5",
+      "text": "पाँच",
+      "duration_sec": 0.3,
+      "bytes": 28844
+    },
+    "digit_6.wav": {
+      "category": "digits",
+      "token": "6",
+      "text": "छह",
+      "duration_sec": 0.3,
+      "bytes": 28844
+    },
+    "digit_7.wav": {
+      "category": "digits",
+      "token": "7",
+      "text": "सात",
+      "duration_sec": 0.3,
+      "bytes": 28844
+    },
+    "digit_8.wav": {
+      "category": "digits",
+      "token": "8",
+      "text": "आठ",
+      "duration_sec": 0.3,
+      "bytes": 28844
+    },
+    "digit_9.wav": {
+      "category": "digits",
+      "token": "9",
+      "text": "नौ",
+      "duration_sec": 0.3,
+      "bytes": 28844
+    },
+    "month_01.wav": {
+      "category": "months",
+      "token": "01",
+      "text": "जनवरी",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_02.wav": {
+      "category": "months",
+      "token": "02",
+      "text": "फ़रवरी",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_03.wav": {
+      "category": "months",
+      "token": "03",
+      "text": "मार्च",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_04.wav": {
+      "category": "months",
+      "token": "04",
+      "text": "अप्रैल",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_05.wav": {
+      "category": "months",
+      "token": "05",
+      "text": "मई",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_06.wav": {
+      "category": "months",
+      "token": "06",
+      "text": "जून",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_07.wav": {
+      "category": "months",
+      "token": "07",
+      "text": "जुलाई",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_08.wav": {
+      "category": "months",
+      "token": "08",
+      "text": "अगस्त",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_09.wav": {
+      "category": "months",
+      "token": "09",
+      "text": "सितंबर",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_10.wav": {
+      "category": "months",
+      "token": "10",
+      "text": "अक्टूबर",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_11.wav": {
+      "category": "months",
+      "token": "11",
+      "text": "नवंबर",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "month_12.wav": {
+      "category": "months",
+      "token": "12",
+      "text": "दिसंबर",
+      "duration_sec": 0.4,
+      "bytes": 38444
+    },
+    "num_00.wav": {
+      "category": "numbers",
+      "token": "00",
+      "text": "शून्य",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_01.wav": {
+      "category": "numbers",
+      "token": "01",
+      "text": "एक",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_02.wav": {
+      "category": "numbers",
+      "token": "02",
+      "text": "दो",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_03.wav": {
+      "category": "numbers",
+      "token": "03",
+      "text": "तीन",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_04.wav": {
+      "category": "numbers",
+      "token": "04",
+      "text": "चार",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_05.wav": {
+      "category": "numbers",
+      "token": "05",
+      "text": "पाँच",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_06.wav": {
+      "category": "numbers",
+      "token": "06",
+      "text": "छह",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_07.wav": {
+      "category": "numbers",
+      "token": "07",
+      "text": "सात",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_08.wav": {
+      "category": "numbers",
+      "token": "08",
+      "text": "आठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_09.wav": {
+      "category": "numbers",
+      "token": "09",
+      "text": "नौ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_10.wav": {
+      "category": "numbers",
+      "token": "10",
+      "text": "दस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_11.wav": {
+      "category": "numbers",
+      "token": "11",
+      "text": "ग्यारह",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_12.wav": {
+      "category": "numbers",
+      "token": "12",
+      "text": "बारह",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_13.wav": {
+      "category": "numbers",
+      "token": "13",
+      "text": "तेरह",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_14.wav": {
+      "category": "numbers",
+      "token": "14",
+      "text": "चौदह",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_15.wav": {
+      "category": "numbers",
+      "token": "15",
+      "text": "पंद्रह",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_16.wav": {
+      "category": "numbers",
+      "token": "16",
+      "text": "सोलह",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_17.wav": {
+      "category": "numbers",
+      "token": "17",
+      "text": "सत्रह",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_18.wav": {
+      "category": "numbers",
+      "token": "18",
+      "text": "अठारह",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_19.wav": {
+      "category": "numbers",
+      "token": "19",
+      "text": "उन्नीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_20.wav": {
+      "category": "numbers",
+      "token": "20",
+      "text": "बीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_21.wav": {
+      "category": "numbers",
+      "token": "21",
+      "text": "इक्कीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_22.wav": {
+      "category": "numbers",
+      "token": "22",
+      "text": "बाईस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_23.wav": {
+      "category": "numbers",
+      "token": "23",
+      "text": "तेईस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_24.wav": {
+      "category": "numbers",
+      "token": "24",
+      "text": "चौबीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_25.wav": {
+      "category": "numbers",
+      "token": "25",
+      "text": "पच्चीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_26.wav": {
+      "category": "numbers",
+      "token": "26",
+      "text": "छब्बीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_27.wav": {
+      "category": "numbers",
+      "token": "27",
+      "text": "सत्ताईस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_28.wav": {
+      "category": "numbers",
+      "token": "28",
+      "text": "अट्ठाईस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_29.wav": {
+      "category": "numbers",
+      "token": "29",
+      "text": "उनतीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_30.wav": {
+      "category": "numbers",
+      "token": "30",
+      "text": "तीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_31.wav": {
+      "category": "numbers",
+      "token": "31",
+      "text": "इकतीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_32.wav": {
+      "category": "numbers",
+      "token": "32",
+      "text": "बत्तीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_33.wav": {
+      "category": "numbers",
+      "token": "33",
+      "text": "तैंतीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_34.wav": {
+      "category": "numbers",
+      "token": "34",
+      "text": "चौंतीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_35.wav": {
+      "category": "numbers",
+      "token": "35",
+      "text": "पैंतीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_36.wav": {
+      "category": "numbers",
+      "token": "36",
+      "text": "छत्तीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_37.wav": {
+      "category": "numbers",
+      "token": "37",
+      "text": "सैंतीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_38.wav": {
+      "category": "numbers",
+      "token": "38",
+      "text": "अड़तीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_39.wav": {
+      "category": "numbers",
+      "token": "39",
+      "text": "उनतालीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_40.wav": {
+      "category": "numbers",
+      "token": "40",
+      "text": "चालीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_41.wav": {
+      "category": "numbers",
+      "token": "41",
+      "text": "इकतालीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_42.wav": {
+      "category": "numbers",
+      "token": "42",
+      "text": "बयालीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_43.wav": {
+      "category": "numbers",
+      "token": "43",
+      "text": "तैंतालीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_44.wav": {
+      "category": "numbers",
+      "token": "44",
+      "text": "चवालीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_45.wav": {
+      "category": "numbers",
+      "token": "45",
+      "text": "पैंतालीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_46.wav": {
+      "category": "numbers",
+      "token": "46",
+      "text": "छियालीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_47.wav": {
+      "category": "numbers",
+      "token": "47",
+      "text": "सैंतालीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_48.wav": {
+      "category": "numbers",
+      "token": "48",
+      "text": "अड़तालीस",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_49.wav": {
+      "category": "numbers",
+      "token": "49",
+      "text": "उनचास",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_50.wav": {
+      "category": "numbers",
+      "token": "50",
+      "text": "पचास",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_51.wav": {
+      "category": "numbers",
+      "token": "51",
+      "text": "इक्यावन",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_52.wav": {
+      "category": "numbers",
+      "token": "52",
+      "text": "बावन",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_53.wav": {
+      "category": "numbers",
+      "token": "53",
+      "text": "तिरेपन",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_54.wav": {
+      "category": "numbers",
+      "token": "54",
+      "text": "चौवन",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_55.wav": {
+      "category": "numbers",
+      "token": "55",
+      "text": "पचपन",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_56.wav": {
+      "category": "numbers",
+      "token": "56",
+      "text": "छप्पन",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_57.wav": {
+      "category": "numbers",
+      "token": "57",
+      "text": "सत्तावन",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_58.wav": {
+      "category": "numbers",
+      "token": "58",
+      "text": "अट्ठावन",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_59.wav": {
+      "category": "numbers",
+      "token": "59",
+      "text": "उनसठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_60.wav": {
+      "category": "numbers",
+      "token": "60",
+      "text": "साठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_61.wav": {
+      "category": "numbers",
+      "token": "61",
+      "text": "इकसठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_62.wav": {
+      "category": "numbers",
+      "token": "62",
+      "text": "बासठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_63.wav": {
+      "category": "numbers",
+      "token": "63",
+      "text": "तिरेसठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_64.wav": {
+      "category": "numbers",
+      "token": "64",
+      "text": "चौंसठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_65.wav": {
+      "category": "numbers",
+      "token": "65",
+      "text": "पैंसठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_66.wav": {
+      "category": "numbers",
+      "token": "66",
+      "text": "छियासठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_67.wav": {
+      "category": "numbers",
+      "token": "67",
+      "text": "सरसठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_68.wav": {
+      "category": "numbers",
+      "token": "68",
+      "text": "अड़सठ",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_69.wav": {
+      "category": "numbers",
+      "token": "69",
+      "text": "उनहत्तर",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_70.wav": {
+      "category": "numbers",
+      "token": "70",
+      "text": "सत्तर",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_71.wav": {
+      "category": "numbers",
+      "token": "71",
+      "text": "इकहत्तर",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_72.wav": {
+      "category": "numbers",
+      "token": "72",
+      "text": "बहत्तर",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_73.wav": {
+      "category": "numbers",
+      "token": "73",
+      "text": "तिहत्तर",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_74.wav": {
+      "category": "numbers",
+      "token": "74",
+      "text": "चौहत्तर",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_75.wav": {
+      "category": "numbers",
+      "token": "75",
+      "text": "पचहत्तर",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_76.wav": {
+      "category": "numbers",
+      "token": "76",
+      "text": "छिहत्तर",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_77.wav": {
+      "category": "numbers",
+      "token": "77",
+      "text": "सतहत्तर",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_78.wav": {
+      "category": "numbers",
+      "token": "78",
+      "text": "अठहत्तर",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_79.wav": {
+      "category": "numbers",
+      "token": "79",
+      "text": "उन्नासी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_80.wav": {
+      "category": "numbers",
+      "token": "80",
+      "text": "अस्सी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_81.wav": {
+      "category": "numbers",
+      "token": "81",
+      "text": "इक्यासी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_82.wav": {
+      "category": "numbers",
+      "token": "82",
+      "text": "बयासी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_83.wav": {
+      "category": "numbers",
+      "token": "83",
+      "text": "तिरासी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_84.wav": {
+      "category": "numbers",
+      "token": "84",
+      "text": "चौरासी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_85.wav": {
+      "category": "numbers",
+      "token": "85",
+      "text": "पचासी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_86.wav": {
+      "category": "numbers",
+      "token": "86",
+      "text": "छियासी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_87.wav": {
+      "category": "numbers",
+      "token": "87",
+      "text": "सत्तासी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_88.wav": {
+      "category": "numbers",
+      "token": "88",
+      "text": "अट्ठासी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_89.wav": {
+      "category": "numbers",
+      "token": "89",
+      "text": "नवासी",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_90.wav": {
+      "category": "numbers",
+      "token": "90",
+      "text": "नब्बे",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_91.wav": {
+      "category": "numbers",
+      "token": "91",
+      "text": "इक्यानवे",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_92.wav": {
+      "category": "numbers",
+      "token": "92",
+      "text": "बानवे",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_93.wav": {
+      "category": "numbers",
+      "token": "93",
+      "text": "तिरानवे",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_94.wav": {
+      "category": "numbers",
+      "token": "94",
+      "text": "चौरानवे",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_95.wav": {
+      "category": "numbers",
+      "token": "95",
+      "text": "पंचानवे",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_96.wav": {
+      "category": "numbers",
+      "token": "96",
+      "text": "छियानवे",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_97.wav": {
+      "category": "numbers",
+      "token": "97",
+      "text": "सत्तानवे",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_98.wav": {
+      "category": "numbers",
+      "token": "98",
+      "text": "अट्ठानवे",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "num_99.wav": {
+      "category": "numbers",
+      "token": "99",
+      "text": "निन्यानवे",
+      "duration_sec": 0.35,
+      "bytes": 33644
+    },
+    "label_name.wav": {
+      "category": "labels",
+      "token": "label_name",
+      "text": "अभ्यर्थी का नाम",
+      "duration_sec": 0.45,
+      "bytes": 43244
+    },
+    "label_dob.wav": {
+      "category": "labels",
+      "token": "label_dob",
+      "text": "जन्म तिथि",
+      "duration_sec": 0.45,
+      "bytes": 43244
+    },
+    "label_district.wav": {
+      "category": "labels",
+      "token": "label_district",
+      "text": "गृह ज़िला",
+      "duration_sec": 0.45,
+      "bytes": 43244
+    },
+    "label_ref_no.wav": {
+      "category": "labels",
+      "token": "label_ref_no",
+      "text": "संदर्भ संख्या",
+      "duration_sec": 0.45,
+      "bytes": 43244
+    },
+    "prompt_sahi_hai.wav": {
+      "category": "prompts",
+      "token": "prompt_sahi_hai",
+      "text": "सही है?",
+      "duration_sec": 0.5,
+      "bytes": 48044
+    },
+    "prompt_sahi_bataiye.wav": {
+      "category": "prompts",
+      "token": "prompt_sahi_bataiye",
+      "text": "सही जानकारी बताइए।",
+      "duration_sec": 0.5,
+      "bytes": 48044
+    },
+    "prompt_dobara_bataiye.wav": {
+      "category": "prompts",
+      "token": "prompt_dobara_bataiye",
+      "text": "माफ़ कीजिए, दोबारा बताइए। हाँ या नहीं?",
+      "duration_sec": 0.5,
+      "bytes": 48044
+    },
+    "prompt_spell_out.wav": {
+      "category": "prompts",
+      "token": "prompt_spell_out",
+      "text": "नाम कैसे लिखना है? एक एक अक्षर बोलकर बताइए।",
+      "duration_sec": 0.5,
+      "bytes": 48044
+    }
+  }
+}

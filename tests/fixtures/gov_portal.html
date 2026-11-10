@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="hi-en">
+<head>
+  <meta charset="UTF-8">
+  <title>Government Portal Live Layout Fixture</title>
+</head>
+<body>
+  <form id="nic-application-form">
+    <table class="gov-table">
+      <tbody>
+        <tr>
+          <td class="col-serial">1</td>
+          <td class="col-label">
+            अभ्यर्थी का पूरा नाम / Full Name of Candidate:
+            <span class="req-star">*</span>
+          </td>
+          <td class="col-input">
+            <input type="text" id="txtCandidateName" name="txtCandidateName" class="nic-input" maxlength="60" required autocomplete="off">
+          </td>
+        </tr>
+        <tr>
+          <td class="col-serial">2</td>
+          <td class="col-label">
+            जन्म तिथि / Date of Birth (DD/MM/YYYY):
+            <span class="req-star">*</span>
+          </td>
+          <td class="col-input">
+            <input type="text" id="txtDOB" name="txtDOB" class="nic-input" placeholder="DD/MM/YYYY" maxlength="10" required autocomplete="off">
+          </td>
+        </tr>
+        <tr>
+          <td class="col-serial">3</td>
+          <td class="col-label">
+            स्थायी निवास जिला / Permanent Home District:
+            <span class="req-star">*</span>
+          </td>
+          <td class="col-input">
+            <input type="text" id="txtDistrict" name="txtDistrict" class="nic-input" maxlength="40" required autocomplete="off">
+          </td>
+        </tr>
+        <tr>
+          <td class="col-serial">4</td>
+          <td class="col-label">
+            पंजीकरण पर्ची संख्या / Registration or Roll No:
+            <span class="req-star">*</span>
+          </td>
+          <td class="col-input">
+            <input type="text" id="txtRegNo" name="txtRegNo" class="nic-input" maxlength="12" required autocomplete="off">
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="actions-section">
+      <input type="submit" id="btnFinalSubmit" value="Final Submit / अंतिम रूप से जमा करें" class="btn-gov-submit">
+    </div>
+  </form>
+</body>
+</html>

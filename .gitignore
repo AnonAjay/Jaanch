@@ -1,0 +1,6 @@
+.env
+*.pem
+node_modules/
+__pycache__/
+.venv/
+proxy/fixtures/private/

@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Jaanch - Voice-Assisted Form Rechecker",
+  "version": "0.1.0",
+  "description": "Zero-latency spoken Hindi read-back and voice verification for cyber cafe and kiosk form-filling across actual live portals with live data.",
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*",
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "Jaanch (जाँच)"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "options_page": "settings/settings.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/field-model.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/audio/*",
+        "popup/*",
+        "settings/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

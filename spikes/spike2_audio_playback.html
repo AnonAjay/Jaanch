@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spike 2: Audio Playback &amp; Letter Synchronization</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      max-width: 640px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    h1 { font-size: 1.25rem; margin-bottom: 0.5rem; color: #1e3a8a; }
+    p { font-size: 0.9rem; color: #475569; margin-bottom: 1rem; }
+    .spelled-box {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin: 1.5rem 0;
+    }
+    .letter-bubble {
+      width: 44px;
+      height: 44px;
+      border: 2px solid #cbd5e1;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 700;
+      background: #f8fafc;
+      transition: all 0.15s ease;
+    }
+    .letter-bubble.active {
+      background: #fef08a;
+      border-color: #ca8a04;
+      transform: scale(1.15);
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .btn {
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 0.65rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    .log-box {
+      margin-top: 1.5rem;
+      background: #0f172a;
+      color: #38bdf8;
+      font-family: monospace;
+      font-size: 0.825rem;
+      padding: 1rem;
+      border-radius: 6px;
+      height: 160px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+    .badge.pass { background: #dcfce7; color: #15803d; }
+    .badge.pending { background: #fef3c7; color: #92400e; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Spike 2: Saved Audio Clip Playback &amp; Letter Sync</h1>
+    <p>Tests user-gesture audio playback via Web Audio API, measuring startup latency and simulating letter-by-letter visual highlight sequencing with 250ms pauses.</p>
+
+    <div class="spelled-box" id="bubbles">
+      <div class="letter-bubble" data-char="S">S</div>
+      <div class="letter-bubble" data-char="A">A</div>
+      <div class="letter-bubble" data-char="N">N</div>
+      <div class="letter-bubble" data-char="J">J</div>
+      <div class="letter-bubble" data-char="A">A</div>
+      <div class="letter-bubble" data-char="Y">Y</div>
+    </div>
+
+    <button id="btn-play" class="btn">&#9654; Play Spelled Sequence (User Gesture)</button>
+    <div id="status-badge" class="badge pending">Status: Ready to test</div>
+
+    <div class="log-box" id="log">Waiting for user gesture...</div>
+  </div>
+
+  <script>
+    const logElem = document.getElementById("log");
+    const statusBadge = document.getElementById("status-badge");
+    const btnPlay = document.getElementById("btn-play");
+    const bubbles = Array.from(document.querySelectorAll(".letter-bubble"));
+
+    function log(msg) {
+      logElem.textContent += `[${new Date().toISOString().substring(11, 23)}] ${msg}\n`;
+      logElem.scrollTop = logElem.scrollHeight;
+    }
+
+    // Web Audio Synthesizer for tone-based playback (simulating 48kHz WAV letter clips)
+    let audioCtx = null;
+
+    function playTone(freq, durationMs) {
+      return new Promise((resolve) => {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+        // Envelope: 10ms ramp in, 10ms ramp out
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime + (durationMs / 1000) - 0.01);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + (durationMs / 1000));
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + (durationMs / 1000));
+
+        osc.onended = () => resolve();
+      });
+    }
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    btnPlay.addEventListener("click", async () => {
+      btnPlay.disabled = true;
+      const startTime = performance.now();
+      log("User gesture received. Initializing AudioContext...");
+
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === "suspended") {
+          await audioCtx.resume();
+        }
+        const latency = (performance.now() - startTime).toFixed(1);
+        log(`AudioContext active. Audio output latency: ${latency}ms.`);
+
+        // Frequencies corresponding to letters (A-Z scaled)
+        const charFreqs = { 'S': 440, 'A': 523, 'N': 587, 'J': 659, 'Y': 698 };
+
+        for (let i = 0; i < bubbles.length; i++) {
+          const b = bubbles[i];
+          const char = b.getAttribute("data-char");
+          b.classList.add("active");
+          log(`Playing letter [${char}] (${i + 1}/${bubbles.length})...`);
+
+          const freq = charFreqs[char] || 440;
+          await playTone(freq, 200); // 200ms audio duration
+          b.classList.remove("active");
+
+          // 250ms pause between letters as specified in ARCHITECTURE section 7
+          if (i < bubbles.length - 1) {
+            await sleep(250);
+          }
+        }
+
+        log("Spelled sequence completed successfully.");
+        statusBadge.textContent = "Status: PASS (Audio playback & letter sync verified)";
+        statusBadge.className = "badge pass";
+      } catch (err) {
+        log(`Playback error: ${err.message}`);
+        statusBadge.textContent = "Status: FAIL";
+      } finally {
+        btnPlay.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

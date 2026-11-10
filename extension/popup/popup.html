@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jaanch (जाँच) - Voice Verification Companion</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body class="jaanch-body">
+  <div class="jaanch-popup-window" id="jaanch-window">
+    
+    <!-- Top Header Bar -->
+    <header class="jaanch-header">
+      <div class="brand-group" id="header-brand">
+        <span class="brand-title">Jaanch</span>
+      </div>
+
+      <nav class="top-nav-actions">
+        <!-- Manual Second Page Routing Pill (For direct jump / debugging) -->
+        <button id="btn-nav-field" class="nav-btn-pill" title="Jump to Verification Screen (फ़ील्ड 1 पर जाएं)">
+          Verify (फ़ील्ड 1) →
+        </button>
+
+        <button id="btn-nav-summary" class="nav-btn" title="Verification Summary / ट्रांज़ैक्शन" aria-label="Verification Summary">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+        </button>
+
+        <button id="btn-nav-settings" class="nav-btn" title="Settings / सेटिंग्स" aria-label="Settings">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </nav>
+    </header>
+
+    <!-- Edge-to-Edge Progress Bar (Zero Spacing, Sleek Line directly under Header) -->
+    <div id="progress-bar-wrapper" class="progress-bar-edge hidden">
+      <div id="progress-fill" class="progress-fill-edge" style="width: 25%;"></div>
+      <!-- Hidden compatibility elements for tests/listeners -->
+      <span id="field-step" style="display: none;">Field 1 of 4</span>
+      <span id="progress-percent" style="display: none;">25%</span>
+    </div>
+
+    <!-- MAIN VIEW CONTAINER -->
+    <main class="views-viewport">
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 1: HOMEPAGE / MULTILINGUAL ATOMIC ORBITAL UI     -->
+      <!-- ======================================================== -->
+      <section id="screen-homepage" class="view-screen active">
+        <div class="home-minimal-container">
+          
+          <!-- Center Icon: Green Jaanch Ball with 3 Concentric Multilingual Orbit Layers -->
+          <div class="atomic-orbit-centerpiece" id="atomic-orbit-centerpiece">
+            <!-- Center Green Jaanch Ball with slight shadow -->
+            <div class="jaanch-central-ball">
+              <span class="jaanch-ball-text">जाँच</span>
+            </div>
+
+            <!-- Layer 1: Inner Orbit (Tight radius, vibrant orange, Gnani words) -->
+            <div class="orbit-layer orbit-layer-1">
+              <span class="orbit-lang-word w-l1" style="--a: 0;">सत्यापन</span>
+              <span class="orbit-lang-word w-l1" style="--a: 1;">Verify</span>
+              <span class="orbit-lang-word w-l1" style="--a: 2;">যাচাই</span>
+            </div>
+
+            <!-- Layer 2: Middle Orbit (Medium radius, softer orange) -->
+            <div class="orbit-layer orbit-layer-2">
+              <span class="orbit-lang-word w-l2" style="--a: 0;">तपासणी</span>
+              <span class="orbit-lang-word w-l2" style="--a: 1;">ధృవీకరణ</span>
+              <span class="orbit-lang-word w-l2" style="--a: 2;">சரிபார்ப்பு</span>
+              <span class="orbit-lang-word w-l2" style="--a: 3;">ચકાસણી</span>
+            </div>
+
+            <!-- Layer 3: Outer Orbit (Wide radius, fading out orange) -->
+            <div class="orbit-layer orbit-layer-3">
+              <span class="orbit-lang-word w-l3" style="--a: 0;">ಪರಿಶೀಲನೆ</span>
+              <span class="orbit-lang-word w-l3" style="--a: 1;">പരിശോധന</span>
+              <span class="orbit-lang-word w-l3" style="--a: 2;">ଯାଞ୍ଚ</span>
+              <span class="orbit-lang-word w-l3" style="--a: 3;">ਪੜਤਾਲ</span>
+            </div>
+          </div>
+
+          <!-- Vertical Steps in Open (No Box, Simple English, Minimalistic & Premium) -->
+          <div class="home-steps-vertical">
+            <div class="step-v-item">
+              <span class="step-v-num">1.</span>
+              <span class="step-v-text">Please open any online form to activate Jaanch.</span>
+            </div>
+            <div class="step-v-item">
+              <span class="step-v-num">2.</span>
+              <span class="step-v-text">Look for the Jaanch sticker <span class="badge-mini">&gt;)</span> on the Submit button.</span>
+            </div>
+            <div class="step-v-item">
+              <span class="step-v-num">3.</span>
+              <span class="step-v-text">Click to listen and voice check every field with zero errors.</span>
+            </div>
+          </div>
+
+          <!-- Hidden compatibility elements for background listeners/tests -->
+          <div style="display: none;" aria-hidden="true">
+            <button id="btn-start-verification"></button>
+            <span id="home-detected-count"></span>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 2: ACTIVE FIELD VERIFICATION (OPEN SPACE TEMPLATE) -->
+      <!-- ======================================================== -->
+      <section id="screen-verification" class="view-screen hidden">
+        <div class="verification-open-container">
+          
+          <!-- Field Header Row: 1.) Field_Title 🔊          < | > -->
+          <div class="field-header-row">
+            <div class="field-title-group">
+              <span id="field-number" class="field-num-prefix">1.)</span>
+              <h2 id="field-label" class="field-label-open">Candidate Name</h2>
+              <button id="btn-tts-speak" class="btn-icon-bubble" title="Pronunciation TTS (उच्चारण सुनें)">
+                🔊
+              </button>
+            </div>
+
+            <div class="field-nav-group">
+              <div class="field-nav-arrows">
+                <button id="btn-prev-field" class="btn-nav-arrow" title="Previous field">&lt;</button>
+                <button id="btn-next-field" class="btn-nav-arrow" title="Next field">&gt;</button>
+              </div>
+              <span id="field-remaining-count" class="field-remaining-text">3 remaining</span>
+            </div>
+          </div>
+
+          <!-- Underline Accent Line under Title -->
+          <div class="field-title-underline"></div>
+
+          <!-- Center Open Space: Large Value (>= 40px) + Spelled Tokens -->
+          <div class="field-value-display-open">
+            <div id="field-value-large" class="value-large-open">SANJAY</div>
+            <div id="spelled-container" class="spelled-chips-open">
+              <!-- Dynamically populated spelled letter/digit bubbles -->
+            </div>
+          </div>
+
+          <!-- Bottom Action Bar: "Is this information correct?"  ( ✔ )  ( ✖ )  [ ▶ / ||| ] -->
+          <div class="verification-bottom-bar">
+            <div class="decision-prompt-text">
+              Is this information correct?
+            </div>
+
+            <div class="decision-circle-group">
+              <!-- Minimalist Circle Tick: Accept / Confirm -->
+              <button id="btn-verify-tick" class="btn-circle-action btn-circle-tick" title="Accept / सही है (Confirm)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </button>
+
+              <!-- Minimalist Circle Cross: Reject / Flag -->
+              <button id="btn-verify-cross" class="btn-circle-action btn-circle-cross" title="Reject / गलत है (Flag)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+
+              <!-- Compact Continuous Voice Mic Pill (Mini waveform inside button) -->
+              <button id="btn-voice-toggle" class="btn-pill-voice" title="Speak to Verify (Continuous Mic)">
+                <div class="voice-btn-inner" id="voice-btn-inner">
+                  <!-- Play Icon (when idle) -->
+                  <svg id="voice-icon-play" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                  
+                  <!-- Stop Icon (when active) -->
+                  <svg id="voice-icon-stop" class="hidden" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                  </svg>
+
+                  <!-- 3-4 Animated Mini Waveform Lines -->
+                  <div id="voice-wave-bars" class="voice-wave-bars hidden">
+                    <span class="wave-bar bar-1"></span>
+                    <span class="wave-bar bar-2"></span>
+                    <span class="wave-bar bar-3"></span>
+                    <span class="wave-bar bar-4"></span>
+                  </div>
+                </div>
+                <span id="voice-btn-sub" class="voice-btn-text">Mic</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hidden compatibility elements for background listeners / test assertions -->
+          <div style="display: none;" aria-hidden="true">
+            <span id="field-kind">NAME</span>
+            <span id="field-status-chip">Not Checked</span>
+            <canvas id="waveform-canvas" width="1" height="1"></canvas>
+            <div id="vad-indicator">Ready</div>
+            <div id="heard-container">
+              <span id="heard-transcript"></span>
+              <span id="heard-action"></span>
+            </div>
+            <button id="btn-accept"></button>
+            <button id="btn-keep"></button>
+            <button id="btn-ask-again"></button>
+            <button id="btn-play-prompt"></button>
+            <button id="btn-clear-session"></button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 4: VERIFICATION SUMMARY ("TRANSACTION / FULL DATA") -->
+      <!-- ======================================================== -->
+      <section id="screen-summary" class="view-screen hidden">
+        <div class="summary-open-container">
+          <!-- Clean Open Header Row -->
+          <div class="summary-header-row">
+            <div class="summary-header-left">
+              <h2 class="summary-title">Verification Summary</h2>
+              <span id="summary-badge-count" class="summary-badge-count"></span>
+            </div>
+            <button id="btn-summary-back" class="btn-text-back">← Back to Field</button>
+          </div>
+
+          <!-- Open-Space Data Rows (Zero external borders, no nested card, no grid table) -->
+          <div id="summary-table-body" class="summary-rows-container">
+            <!-- Dynamically populated open row items -->
+          </div>
+
+          <!-- Legacy list ID for unit tests -->
+          <ul id="summary-list" class="summary-list hidden"></ul>
+
+          <!-- Action Buttons Bar: Apply, Recheck, Ask Again -->
+          <div class="summary-actions-open">
+            <button id="btn-apply-changes" class="btn-pill-action btn-pill-apply" title="Apply approved values to webpage inputs">
+              Apply to Form
+            </button>
+            <button id="btn-recheck-all" class="btn-pill-action btn-pill-outline" title="Recheck all fields from start">
+              Recheck All
+            </button>
+            <button id="btn-ask-again-summary" class="btn-pill-action btn-pill-outline" title="Recheck unverified or flagged fields">
+              Ask Unverified
+            </button>
+          </div>
+
+          <div id="apply-feedback" class="apply-feedback hidden">
+            ✓ Form values safely updated on the webpage!
+          </div>
+        </div>
+      </section>
+
+      <!-- Screen 3: Summary ends above -->
+
+    </main>
+
+    <!-- Global Footer Bar: Faint Line + Minimal Professional AI Disclaimer -->
+    <footer class="jaanch-footer-minimal">
+      <p class="ai-disclaimer-text">
+        AI models can make mistakes. Please verify critical information carefully before final submission.
+      </p>
+      <!-- Kept hidden for background listeners/tests -->
+      <span id="mic-status" style="display: none;">Mic: Ready</span>
+    </footer>
+
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

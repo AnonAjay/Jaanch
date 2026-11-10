@@ -1,0 +1,322 @@
+[
+  {
+    "id": "CASE_01",
+    "error_type": "digit_swap",
+    "target_field": "applicant-ref-no",
+    "profile": { "name": "SANJAY KUMAR", "dob": "18/03/1998", "district": "VARANASI", "ref_no": "962081" },
+    "entered": { "name": "SANJAY KUMAR", "dob": "18/03/1998", "district": "VARANASI", "ref_no": "960281" },
+    "description": "Adjacent digits swapped (20 -> 02)"
+  },
+  {
+    "id": "CASE_02",
+    "error_type": "digit_swap",
+    "target_field": "applicant-ref-no",
+    "profile": { "name": "PRIYA SHARMA", "dob": "22/07/2000", "district": "LUCKNOW", "ref_no": "451829" },
+    "entered": { "name": "PRIYA SHARMA", "dob": "22/07/2000", "district": "LUCKNOW", "ref_no": "458129" },
+    "description": "Middle digits swapped (18 -> 81)"
+  },
+  {
+    "id": "CASE_03",
+    "error_type": "digit_swap",
+    "target_field": "applicant-ref-no",
+    "profile": { "name": "AMIT PATEL", "dob": "05/11/1995", "district": "KANPUR", "ref_no": "783412" },
+    "entered": { "name": "AMIT PATEL", "dob": "05/11/1995", "district": "KANPUR", "ref_no": "784312" },
+    "description": "Digits swapped (34 -> 43)"
+  },
+  {
+    "id": "CASE_04",
+    "error_type": "digit_swap",
+    "target_field": "applicant-ref-no",
+    "profile": { "name": "POOJA VERMA", "dob": "14/02/1999", "district": "AYODHYA", "ref_no": "612984" },
+    "entered": { "name": "POOJA VERMA", "dob": "14/02/1999", "district": "AYODHYA", "ref_no": "612948" },
+    "description": "Final digits swapped (84 -> 48)"
+  },
+  {
+    "id": "CASE_05",
+    "error_type": "digit_swap",
+    "target_field": "applicant-ref-no",
+    "profile": { "name": "VIKRAM SINGH", "dob": "30/09/1997", "district": "PRAYAGRAJ", "ref_no": "339105" },
+    "entered": { "name": "VIKRAM SINGH", "dob": "30/09/1997", "district": "PRAYAGRAJ", "ref_no": "331905" },
+    "description": "Digits swapped (91 -> 19)"
+  },
+  {
+    "id": "CASE_06",
+    "error_type": "digit_swap",
+    "target_field": "applicant-ref-no",
+    "profile": { "name": "NEHA GUPTA", "dob": "11/04/2001", "district": "GORAKHPUR", "ref_no": "820471" },
+    "entered": { "name": "NEHA GUPTA", "dob": "11/04/2001", "district": "GORAKHPUR", "ref_no": "820741" },
+    "description": "Digits swapped (47 -> 74)"
+  },
+  {
+    "id": "CASE_07",
+    "error_type": "digit_swap",
+    "target_field": "applicant-ref-no",
+    "profile": { "name": "RAHUL YADAV", "dob": "25/12/1996", "district": "MEERUT", "ref_no": "504628" },
+    "entered": { "name": "RAHUL YADAV", "dob": "25/12/1996", "district": "MEERUT", "ref_no": "054628" },
+    "description": "Leading digits swapped (50 -> 05)"
+  },
+  {
+    "id": "CASE_08",
+    "error_type": "digit_swap",
+    "target_field": "applicant-ref-no",
+    "profile": { "name": "SUNITA DEVI", "dob": "19/08/1994", "district": "AGRA", "ref_no": "917382" },
+    "entered": { "name": "SUNITA DEVI", "dob": "19/08/1994", "district": "AGRA", "ref_no": "917832" },
+    "description": "Digits swapped (38 -> 83)"
+  },
+  {
+    "id": "CASE_09",
+    "error_type": "day_month_swap",
+    "target_field": "applicant-dob",
+    "profile": { "name": "ANUPAM MISHRA", "dob": "12/03/1978", "district": "VARANASI", "ref_no": "203948" },
+    "entered": { "name": "ANUPAM MISHRA", "dob": "03/12/1978", "district": "VARANASI", "ref_no": "203948" },
+    "description": "Day and month swapped (12 March entered as 3 Dec)"
+  },
+  {
+    "id": "CASE_10",
+    "error_type": "day_month_swap",
+    "target_field": "applicant-dob",
+    "profile": { "name": "ROHIT TIWARI", "dob": "08/10/1999", "district": "LUCKNOW", "ref_no": "118273" },
+    "entered": { "name": "ROHIT TIWARI", "dob": "10/08/1999", "district": "LUCKNOW", "ref_no": "118273" },
+    "description": "Day and month swapped (8 Oct entered as 10 Aug)"
+  },
+  {
+    "id": "CASE_11",
+    "error_type": "day_month_swap",
+    "target_field": "applicant-dob",
+    "profile": { "name": "KAVITA RAWAT", "dob": "05/09/2002", "district": "KANPUR", "ref_no": "672910" },
+    "entered": { "name": "KAVITA RAWAT", "dob": "09/05/2002", "district": "KANPUR", "ref_no": "672910" },
+    "description": "Day and month swapped (5 Sep entered as 9 May)"
+  },
+  {
+    "id": "CASE_12",
+    "error_type": "day_month_swap",
+    "target_field": "applicant-dob",
+    "profile": { "name": "MANOJ PANDEY", "dob": "07/11/1993", "district": "PRAYAGRAJ", "ref_no": "449182" },
+    "entered": { "name": "MANOJ PANDEY", "dob": "11/07/1993", "district": "PRAYAGRAJ", "ref_no": "449182" },
+    "description": "Day and month swapped (7 Nov entered as 11 July)"
+  },
+  {
+    "id": "CASE_13",
+    "error_type": "day_month_swap",
+    "target_field": "applicant-dob",
+    "profile": { "name": "SHWETA CHAUHAN", "dob": "04/06/1997", "district": "BAREILLY", "ref_no": "553819" },
+    "entered": { "name": "SHWETA CHAUHAN", "dob": "06/04/1997", "district": "BAREILLY", "ref_no": "553819" },
+    "description": "Day and month swapped (4 June entered as 6 April)"
+  },
+  {
+    "id": "CASE_14",
+    "error_type": "day_month_swap",
+    "target_field": "applicant-dob",
+    "profile": { "name": "DINESH KUMAR", "dob": "02/08/1991", "district": "ALIGARH", "ref_no": "881023" },
+    "entered": { "name": "DINESH KUMAR", "dob": "08/02/1991", "district": "ALIGARH", "ref_no": "881023" },
+    "description": "Day and month swapped (2 Aug entered as 8 Feb)"
+  },
+  {
+    "id": "CASE_15",
+    "error_type": "day_month_swap",
+    "target_field": "applicant-dob",
+    "profile": { "name": "RITU SHUKLA", "dob": "01/12/2000", "district": "JHANSI", "ref_no": "349182" },
+    "entered": { "name": "RITU SHUKLA", "dob": "12/01/2000", "district": "JHANSI", "ref_no": "349182" },
+    "description": "Day and month swapped (1 Dec entered as 12 Jan)"
+  },
+  {
+    "id": "CASE_16",
+    "error_type": "day_month_swap",
+    "target_field": "applicant-dob",
+    "profile": { "name": "SATISH CHANDRA", "dob": "06/10/1989", "district": "VARANASI", "ref_no": "772635" },
+    "entered": { "name": "SATISH CHANDRA", "dob": "10/06/1989", "district": "VARANASI", "ref_no": "772635" },
+    "description": "Day and month swapped (6 Oct entered as 10 June)"
+  },
+  {
+    "id": "CASE_17",
+    "error_type": "name_slip",
+    "target_field": "applicant-name",
+    "profile": { "name": "SANJAY KUMAR", "dob": "18/03/1998", "district": "VARANASI", "ref_no": "962081" },
+    "entered": { "name": "SAJAY KUMAR", "dob": "18/03/1998", "district": "VARANASI", "ref_no": "962081" },
+    "description": "Missing letter 'N' in Sanjay"
+  },
+  {
+    "id": "CASE_18",
+    "error_type": "name_slip",
+    "target_field": "applicant-name",
+    "profile": { "name": "PRIYA SHARMA", "dob": "22/07/2000", "district": "LUCKNOW", "ref_no": "451829" },
+    "entered": { "name": "PRIYAA SHARMA", "dob": "22/07/2000", "district": "LUCKNOW", "ref_no": "451829" },
+    "description": "Extra letter 'A' in Priya"
+  },
+  {
+    "id": "CASE_19",
+    "error_type": "name_slip",
+    "target_field": "applicant-name",
+    "profile": { "name": "ABHISHEK VERMA", "dob": "15/05/1996", "district": "KANPUR", "ref_no": "102938" },
+    "entered": { "name": "ABISHEK VERMA", "dob": "15/05/1996", "district": "KANPUR", "ref_no": "102938" },
+    "description": "Missing letter 'H' in Abhishek"
+  },
+  {
+    "id": "CASE_20",
+    "error_type": "name_slip",
+    "target_field": "applicant-name",
+    "profile": { "name": "DEEPAK SINGH", "dob": "09/01/1994", "district": "PRAYAGRAJ", "ref_no": "671829" },
+    "entered": { "name": "DIPAK SINGH", "dob": "09/01/1994", "district": "PRAYAGRAJ", "ref_no": "671829" },
+    "description": "Vowel change 'EE' to 'I'"
+  },
+  {
+    "id": "CASE_21",
+    "error_type": "name_slip",
+    "target_field": "applicant-name",
+    "profile": { "name": "ANURADHA YADAV", "dob": "17/11/1998", "district": "AYODHYA", "ref_no": "449182" },
+    "entered": { "name": "ANURADA YADAV", "dob": "17/11/1998", "district": "AYODHYA", "ref_no": "449182" },
+    "description": "Missing letter 'H' in Anuradha"
+  },
+  {
+    "id": "CASE_22",
+    "error_type": "name_slip",
+    "target_field": "applicant-name",
+    "profile": { "name": "VIJAY PRATAP", "dob": "28/04/1992", "district": "GORAKHPUR", "ref_no": "993821" },
+    "entered": { "name": "VIJAI PRATAP", "dob": "28/04/1992", "district": "GORAKHPUR", "ref_no": "993821" },
+    "description": "Letter substitution 'Y' to 'I'"
+  },
+  {
+    "id": "CASE_23",
+    "error_type": "name_slip",
+    "target_field": "applicant-name",
+    "profile": { "name": "POONAM GUPTA", "dob": "03/10/2001", "district": "MEERUT", "ref_no": "551928" },
+    "entered": { "name": "PUNAM GUPTA", "dob": "03/10/2001", "district": "MEERUT", "ref_no": "551928" },
+    "description": "Vowel substitution 'OO' to 'U'"
+  },
+  {
+    "id": "CASE_24",
+    "error_type": "name_slip",
+    "target_field": "applicant-name",
+    "profile": { "name": "MOHAMMAD TARIQ", "dob": "14/06/1995", "district": "AGRA", "ref_no": "718293" },
+    "entered": { "name": "MOHD TARIQ", "dob": "14/06/1995", "district": "AGRA", "ref_no": "718293" },
+    "description": "Abbreviated prefix Mohd instead of Mohammad"
+  },
+  {
+    "id": "CASE_25",
+    "error_type": "district_mismatch",
+    "target_field": "applicant-district",
+    "profile": { "name": "SURESH CHAUHAN", "dob": "20/03/1990", "district": "VARANASI", "ref_no": "192837" },
+    "entered": { "name": "SURESH CHAUHAN", "dob": "20/03/1990", "district": "LUCKNOW", "ref_no": "192837" },
+    "description": "Wrong district selected (Lucknow instead of Varanasi)"
+  },
+  {
+    "id": "CASE_26",
+    "error_type": "district_mismatch",
+    "target_field": "applicant-district",
+    "profile": { "name": "ARTI PAL", "dob": "16/07/1999", "district": "KANPUR", "ref_no": "481920" },
+    "entered": { "name": "ARTI PAL", "dob": "16/07/1999", "district": "AGRA", "ref_no": "481920" },
+    "description": "Wrong district (Agra instead of Kanpur)"
+  },
+  {
+    "id": "CASE_27",
+    "error_type": "district_mismatch",
+    "target_field": "applicant-district",
+    "profile": { "name": "RAKESH DUBEY", "dob": "08/12/1993", "district": "PRAYAGRAJ", "ref_no": "771829" },
+    "entered": { "name": "RAKESH DUBEY", "dob": "08/12/1993", "district": "GORAKHPUR", "ref_no": "771829" },
+    "description": "Wrong district (Gorakhpur instead of Prayagraj)"
+  },
+  {
+    "id": "CASE_28",
+    "error_type": "district_mismatch",
+    "target_field": "applicant-district",
+    "profile": { "name": "MEENA KUMARI", "dob": "29/05/1997", "district": "MEERUT", "ref_no": "338192" },
+    "entered": { "name": "MEENA KUMARI", "dob": "29/05/1997", "district": "BAREILLY", "ref_no": "338192" },
+    "description": "Wrong district (Bareilly instead of Meerut)"
+  },
+  {
+    "id": "CASE_29",
+    "error_type": "district_mismatch",
+    "target_field": "applicant-district",
+    "profile": { "name": "ANIL KUMAR", "dob": "11/02/1994", "district": "AYODHYA", "ref_no": "662918" },
+    "entered": { "name": "ANIL KUMAR", "dob": "11/02/1994", "district": "ALIGARH", "ref_no": "662918" },
+    "description": "Wrong district (Aligarh instead of Ayodhya)"
+  },
+  {
+    "id": "CASE_30",
+    "error_type": "district_mismatch",
+    "target_field": "applicant-district",
+    "profile": { "name": "GEETA RANI", "dob": "24/09/2001", "district": "JHANSI", "ref_no": "991827" },
+    "entered": { "name": "GEETA RANI", "dob": "24/09/2001", "district": "MATHURA", "ref_no": "991827" },
+    "description": "Wrong district (Mathura instead of Jhansi)"
+  },
+  {
+    "id": "CASE_31",
+    "error_type": "district_mismatch",
+    "target_field": "applicant-district",
+    "profile": { "name": "VIKAS SHUKLA", "dob": "15/10/1996", "district": "MORADABAD", "ref_no": "882910" },
+    "entered": { "name": "VIKAS SHUKLA", "dob": "15/10/1996", "district": "RAMPUR", "ref_no": "882910" },
+    "description": "Wrong district (Rampur instead of Moradabad)"
+  },
+  {
+    "id": "CASE_32",
+    "error_type": "district_mismatch",
+    "target_field": "applicant-district",
+    "profile": { "name": "SHASHI BALA", "dob": "07/04/1995", "district": "GHAZIABAD", "ref_no": "229182" },
+    "entered": { "name": "SHASHI BALA", "dob": "07/04/1995", "district": "NOIDA", "ref_no": "229182" },
+    "description": "Wrong district (Noida instead of Ghaziabad)"
+  },
+  {
+    "id": "CASE_33",
+    "error_type": "clean_baseline",
+    "target_field": "none",
+    "profile": { "name": "SANJAY KUMAR", "dob": "18/03/1998", "district": "VARANASI", "ref_no": "962081" },
+    "entered": { "name": "SANJAY KUMAR", "dob": "18/03/1998", "district": "VARANASI", "ref_no": "962081" },
+    "description": "Clean baseline (all 4 fields match perfectly)"
+  },
+  {
+    "id": "CASE_34",
+    "error_type": "clean_baseline",
+    "target_field": "none",
+    "profile": { "name": "PRIYA SHARMA", "dob": "22/07/2000", "district": "LUCKNOW", "ref_no": "451829" },
+    "entered": { "name": "PRIYA SHARMA", "dob": "22-07-2000", "district": "LUCKNOW", "ref_no": "451829" },
+    "description": "Clean baseline (date hyphen delimiter variation)"
+  },
+  {
+    "id": "CASE_35",
+    "error_type": "clean_baseline",
+    "target_field": "none",
+    "profile": { "name": "AMIT PATEL", "dob": "05/11/1995", "district": "KANPUR", "ref_no": "783412" },
+    "entered": { "name": "amit patel", "dob": "05/11/1995", "district": "KANPUR", "ref_no": "783412" },
+    "description": "Clean baseline (case variation in name)"
+  },
+  {
+    "id": "CASE_36",
+    "error_type": "clean_baseline",
+    "target_field": "none",
+    "profile": { "name": "POOJA VERMA", "dob": "14/02/1999", "district": "VARANASI", "ref_no": "612984" },
+    "entered": { "name": "POOJA VERMA", "dob": "14/02/1999", "district": "BANARAS", "ref_no": "612984" },
+    "description": "Clean baseline (Varanasi / Banaras alias match)"
+  },
+  {
+    "id": "CASE_37",
+    "error_type": "clean_baseline",
+    "target_field": "none",
+    "profile": { "name": "VIKRAM SINGH", "dob": "30/09/1997", "district": "PRAYAGRAJ", "ref_no": "339105" },
+    "entered": { "name": "VIKRAM SINGH", "dob": "30 September 1997", "district": "PRAYAGRAJ", "ref_no": "339105" },
+    "description": "Clean baseline (text month date variation)"
+  },
+  {
+    "id": "CASE_38",
+    "error_type": "clean_baseline",
+    "target_field": "none",
+    "profile": { "name": "NEHA GUPTA", "dob": "11/04/2001", "district": "GORAKHPUR", "ref_no": "820471" },
+    "entered": { "name": "NEHA GUPTA", "dob": "११/०४/२००१", "district": "GORAKHPUR", "ref_no": "८२०४७१" },
+    "description": "Clean baseline (Devanagari numeral format in DOB and Ref No)"
+  },
+  {
+    "id": "CASE_39",
+    "error_type": "clean_baseline",
+    "target_field": "none",
+    "profile": { "name": "RAHUL YADAV", "dob": "25/12/1996", "district": "PRAYAGRAJ", "ref_no": "504628" },
+    "entered": { "name": "RAHUL YADAV", "dob": "25/12/1996", "district": "ALLAHABAD", "ref_no": "504628" },
+    "description": "Clean baseline (Prayagraj / Allahabad alias match)"
+  },
+  {
+    "id": "CASE_40",
+    "error_type": "clean_baseline",
+    "target_field": "none",
+    "profile": { "name": "SUNITA DEVI", "dob": "19/08/1994", "district": "AGRA", "ref_no": "917382" },
+    "entered": { "name": "SUNITA DEVI", "dob": "19/08/1994", "district": "AGRA", "ref_no": "917 382" },
+    "description": "Clean baseline (spaced grouping in reference number)"
+  }
+]
