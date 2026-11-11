@@ -11,9 +11,17 @@
 import { devanagariToAscii, normalizeDigits, parseDate } from "../lib/normalize.js";
 import { compareDates, compareDigits, compareName, compareDistrict } from "../lib/compare.js";
 import { classifyReply } from "../lib/intents.js";
+import {
+  extractFieldsFromTranscript,
+  evaluateFieldComparison,
+  detectFormLanguage,
+  getLanguageDisplayLabel,
+} from "../lib/extractor.js";
 import { tokenizeNameForReadback, tokenizeDigitsForReadback, tokenizeDateForReadback } from "../lib/spell.js";
 import { playTTSPhrase, stopAudioPlayback, isAudioPlaying, resumeAudioContext } from "../lib/audio-player.js";
-import { startContinuousListening, pauseContinuousListening, resumeContinuousListening, cancelVoiceCapture, startVoiceCapture, resumeVadAudioContext, isContinuousListeningActive } from "../lib/vad.js";
+import { startContinuousListening, pauseContinuousListening, resumeContinuousListening, cancelVoiceCapture, startVoiceCapture, resumeVadAudioContext, isContinuousListeningActive, getVadState } from "../lib/vad.js";
+
+const TTS_LANGUAGE = "hi-IN";
 
 // State
 let fields = [];
@@ -21,13 +29,21 @@ let currentFieldIndex = 0;
 let isAudioPlayingState = false;
 let isVoiceCapturing = false;
 let continuousController = null;
-let isMicPaused = false;
+let isMicPaused = true;
+let isProxyReachable = null; // null = unknown, true/false = /health check result
 let micPermission = "prompt"; // "prompt" | "granted" | "denied"
 let currentScreenId = "screen-homepage";
 let selectedLanguage = "hi-IN";
+let detectedFormLanguage = "";
+let pageLangHint = "";
 let selectedVoice = "shivani";
 let autoAdvanceTimer = null;
 let hasLivePageFields = false;
+let lastSavedFieldsSignature = "";
+
+const jaanchSessionId = (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+  ? crypto.randomUUID()
+  : `jaanch-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 const PROXY_URL = "http://127.0.0.1:8000";
 
@@ -66,6 +82,8 @@ const fieldLabel = document.getElementById("field-label");
 const fieldKind = document.getElementById("field-kind");
 const fieldStatusChip = document.getElementById("field-status-chip");
 const fieldValueLarge = document.getElementById("field-value-large");
+const fieldEditInput = document.getElementById("field-edit-input");
+const sessionFormRef = document.getElementById("session-form-ref");
 const spelledContainer = document.getElementById("spelled-container");
 const btnTtsSpeak = document.getElementById("btn-tts-speak");
 const btnPrevField = document.getElementById("btn-prev-field");
@@ -117,27 +135,35 @@ const micStatus = document.getElementById("mic-status");
 // Initialization
 document.addEventListener("DOMContentLoaded", () => {
   setupNavigationHandlers();
+  resetVoiceButtonUI();
   loadInitialState();
   checkProxyHealth();
   listenToSessionStorage();
 
-  // One-time click listener to wake up suspended AudioContexts on first user gesture
+  // Wake TTS AudioContext on first user gesture; keep mic paused unless explicitly toggled ON
   document.body.addEventListener("click", () => {
     resumeAudioContext();
-    resumeVadAudioContext();
+    if (!isMicPaused) {
+      resumeVadAudioContext();
+    }
   }, { once: true });
 });
 
-// Refresh fields whenever popup gains focus
+// Refresh fields cleanly whenever popup gains focus without destroying Session DB edits
 if (typeof window !== "undefined") {
   window.addEventListener("focus", () => {
     queryActiveTabForFields((detectedFields) => {
       if (detectedFields && Object.keys(detectedFields).length > 0) {
-        updateFromStorage(detectedFields);
+        const merged = mergeDetectedWithSession(detectedFields);
+        updateFromStorage(merged, { preserveIndex: true });
         saveFieldsToSession();
-        switchScreen("screen-verification", { force: true });
-        renderCurrentField();
-      } else {
+        if (currentScreenId === "screen-homepage") {
+          switchScreen("screen-verification", { force: true });
+        } else {
+          renderCurrentField();
+          renderSummaryTable();
+        }
+      } else if (fields.length === 0) {
         showFieldDetectionMessage();
       }
     });
@@ -260,7 +286,6 @@ function setupNavigationHandlers() {
   });
   btnVoiceToggle?.addEventListener("click", () => {
     resumeAudioContext();
-    resumeVadAudioContext();
     toggleVoiceRecording();
   });
 
@@ -283,16 +308,30 @@ function setupNavigationHandlers() {
     speakCurrentField();
   });
   btnAskAgainSummary?.addEventListener("click", () => {
-    const unverifiedIdx = fields.findIndex((f) => f.status !== "match");
+    const unverifiedIdx = fields.findIndex((f) => f.status !== "match" && f.status !== "filled");
     if (unverifiedIdx !== -1) {
       currentFieldIndex = unverifiedIdx;
       switchScreen("screen-verification");
       renderCurrentField();
       speakCurrentField();
-    } else {
-      alert("All fields are already verified! (सभी फ़ील्ड सत्यापित हैं)");
+    } else if (applyFeedback) {
+      applyFeedback.classList.remove("hidden");
+      applyFeedback.textContent = "✓ All fields are already verified (सभी फ़ील्ड सत्यापित हैं).";
+      setTimeout(() => applyFeedback.classList.add("hidden"), 2500);
     }
   });
+
+  // Editable Session DB input on Verification Screen
+  const handleInlineSessionEdit = (e) => {
+    const current = fields[currentFieldIndex];
+    if (!current) return;
+    const nextVal = e.target.value;
+    applyOperatorSessionEdit(current, nextVal);
+    saveFieldsToSession();
+    renderCurrentField({ skipInputSync: true });
+  };
+  fieldEditInput?.addEventListener("input", handleInlineSessionEdit);
+  fieldEditInput?.addEventListener("change", handleInlineSessionEdit);
 
   // Settings handlers (if opened in embedded/mock mode)
   btnBackSettings?.addEventListener("click", () => {
@@ -396,7 +435,14 @@ function switchScreen(screenId, options = {}) {
     }
   }
 
-  stopCurrentInteractions();
+  if (screenId !== "screen-verification" && !isMicPaused) {
+    isMicPaused = true;
+    pauseContinuousListening();
+  }
+  stopCurrentInteractions({
+    keepVad: screenId === "screen-verification" && !isMicPaused,
+    forceCancel: screenId === "screen-homepage",
+  });
   currentScreenId = screenId;
 
   // Hide all screens
@@ -451,32 +497,90 @@ function updateProgressBar() {
 
 const isInIframe = typeof window !== "undefined" && window.parent && window.parent !== window;
 
-// Register the iframe bridge before DOMContentLoaded so the host's initial
-// field snapshot cannot race the settings/session reads below.
-if (isInIframe) {
-  window.addEventListener("message", (event) => {
-    if (event.source !== window.parent) return;
-    if (event.data?.type === "JAANCH_INIT_FIELDS" || event.data?.type === "JAANCH_FIELDS_RESPONSE") {
-      acceptLivePageFields(event.data.fields);
-    }
-  });
+function mergeDetectedWithSession(detectedFields, savedMapOverride = null) {
+  const existingMap = savedMapOverride || Object.fromEntries(fields.map((f) => [f.id, f]));
+  const freshList = Array.isArray(detectedFields) ? detectedFields : Object.values(detectedFields || {});
+  return Object.fromEntries(
+    freshList
+      .filter((field) => field?.id)
+      .map((field) => {
+        const freshFormVal = field.formValue !== undefined ? field.formValue : (field.value || "");
+        const prev = existingMap[field.id];
+        if (!prev) {
+          return [field.id, { ...field, formValue: freshFormVal }];
+        }
+        const prevFormVal = prev.formValue !== undefined ? prev.formValue : (prev.value || "");
+        const hasSessionEdits =
+          prev.editedByUser ||
+          (prev.status && prev.status !== "not_checked") ||
+          Boolean(prev.extractedValue) ||
+          Boolean(prev.pendingCorrection) ||
+          Boolean(prev.heardTranscript);
+
+        if (hasSessionEdits && prevFormVal === freshFormVal) {
+          return [
+            field.id,
+            {
+              ...field,
+              ...prev,
+              label: field.label || prev.label,
+              required: field.required ?? prev.required,
+              kind: field.kind || prev.kind,
+              formValue: freshFormVal,
+            },
+          ];
+        }
+        return [field.id, { ...field, formValue: freshFormVal }];
+      })
+  );
 }
 
-function acceptLivePageFields(input) {
+function applyOperatorSessionEdit(fieldObj, nextValue) {
+  if (!fieldObj) return;
+  const valStr = String(nextValue ?? "");
+  const trimmed = valStr.trim();
+  const origFormVal = (fieldObj.formValue !== undefined ? fieldObj.formValue : "").trim();
+
+  fieldObj.value = valStr;
+  fieldObj.editedByUser = true;
+  fieldObj.pendingCorrection = null;
+  fieldObj.extractedValue = trimmed || null;
+  fieldObj.updatedAt = Date.now();
+
+  if (!trimmed) {
+    fieldObj.status = origFormVal ? "mismatch" : "not_checked";
+    fieldObj.decision = origFormVal ? "mismatch" : null;
+  } else if (!origFormVal) {
+    fieldObj.status = "filled";
+    fieldObj.decision = null;
+  } else {
+    const cmp = evaluateFieldComparison(fieldObj, valStr);
+    fieldObj.status = cmp.status === "match" ? "match" : "mismatch";
+    fieldObj.decision = fieldObj.status === "match" ? "match" : null;
+  }
+}
+
+function acceptLivePageFields(input, options = {}) {
   const list = Array.isArray(input) ? input : Object.values(input || {});
+  if (options.pageLang !== undefined) {
+    pageLangHint = options.pageLang || "";
+  }
   if (list.length === 0) {
     hasLivePageFields = false;
     showFieldDetectionMessage();
     return false;
   }
 
-  const fieldMap = Object.fromEntries(list.filter((field) => field?.id).map((field) => [field.id, field]));
+  const fieldMap = options.reset ? Object.fromEntries(list.filter((f) => f?.id).map((f) => [f.id, f])) : mergeDetectedWithSession(list);
   if (Object.keys(fieldMap).length === 0) return false;
 
   hasLivePageFields = true;
-  updateFromStorage(fieldMap);
+  if (options.reset) currentFieldIndex = 0;
+  updateFromStorage(fieldMap, { preserveIndex: !options.reset, pageLang: options.pageLang });
   saveFieldsToSession();
-  switchScreen("screen-verification", { force: true });
+  if (currentScreenId === "screen-homepage" || options.reset) {
+    switchScreen("screen-verification", { force: true });
+  }
   renderCurrentField();
   return true;
 }
@@ -524,13 +628,8 @@ export async function loadInitialState() {
           const detectedCount = detectedFields ? Object.keys(detectedFields).length : 0;
           console.log(`[Jaanch Debug] queryActiveTabForFields returned: ${detectedCount} fields.`);
           if (detectedCount > 0) {
-            // The current page is authoritative; saved state can be stale after navigation.
-            const previous = res?.fields || {};
-            const fresh = Array.isArray(detectedFields) ? detectedFields : Object.values(detectedFields);
-            const merged = Object.fromEntries(fresh.map((field) => {
-              const saved = previous[field.id];
-              return [field.id, saved ? { ...field, status: saved.status || field.status, decision: saved.decision || null } : field];
-            }));
+            // Merge live DOM values cleanly with any saved Session DB state for identical fields
+            const merged = mergeDetectedWithSession(detectedFields, res?.fields || {});
             updateFromStorage(merged);
             hasLivePageFields = true;
             saveFieldsToSession();
@@ -557,21 +656,32 @@ function listenToSessionStorage() {
   if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === "session") {
+        if (changes.selectedLanguage?.newValue) {
+          selectedLanguage = changes.selectedLanguage.newValue;
+          if (selectLanguage) selectLanguage.value = selectedLanguage;
+        }
+        if (changes.selectedVoice?.newValue) {
+          selectedVoice = changes.selectedVoice.newValue;
+          if (selectVoice) selectVoice.value = selectedVoice;
+        }
         if (changes.fields) {
           const newFields = changes.fields.newValue;
           const count = newFields ? Object.keys(newFields).length : 0;
           if (count > 0) {
-            updateFromStorage(newFields);
-            // If on homepage and a form is loaded/detected, automatically switch to internal section!
+            const incomingSig = JSON.stringify(newFields);
+            if (incomingSig === lastSavedFieldsSignature) return;
+            updateFromStorage(newFields, { preserveIndex: true });
             if (currentScreenId === "screen-homepage") {
               switchScreen("screen-verification");
+            } else {
+              renderCurrentField();
+              renderSummaryTable();
             }
-            renderCurrentField();
           } else {
-            // Zero fields -> return to homepage
             fields = [];
+            currentFieldIndex = 0;
             detectDefaultStatus();
-            switchScreen("screen-homepage");
+            switchScreen("screen-homepage", { force: true });
           }
         }
         if (changes.micPermission) {
@@ -582,16 +692,29 @@ function listenToSessionStorage() {
     });
   }
 
-  // Cross-frame listener for in-page iframe communication with content script
+  // Single unified cross-frame listener for iframe <-> content script communication
   if (typeof window !== "undefined") {
     window.addEventListener("message", (event) => {
-      if (event.data?.type === "FIELD_CHANGED") {
+      if (isInIframe && event.source !== window.parent) return;
+
+      if (event.data?.type === "JAANCH_INIT_FIELDS" || event.data?.type === "JAANCH_FIELDS_RESPONSE") {
+        acceptLivePageFields(event.data.fields, {
+          reset: Boolean(event.data.reset),
+          pageLang: event.data.pageLang,
+        });
+      } else if (event.data?.type === "FIELD_CHANGED") {
         const { id, value } = event.data;
         let found = false;
         for (let i = 0; i < fields.length; i++) {
           if (fields[i].id === id) {
+            fields[i].formValue = value;
             fields[i].value = value;
             fields[i].status = "not_checked";
+            fields[i].decision = null;
+            fields[i].pendingCorrection = null;
+            fields[i].extractedValue = null;
+            fields[i].heardTranscript = "";
+            fields[i].editedByUser = false;
             found = true;
             break;
           }
@@ -602,7 +725,7 @@ function listenToSessionStorage() {
         } else {
           queryActiveTabForFields((fresh) => {
             if (fresh) {
-              updateFromStorage(fresh);
+              updateFromStorage(mergeDetectedWithSession(fresh), { preserveIndex: true });
               renderCurrentField();
             }
           });
@@ -615,14 +738,23 @@ function listenToSessionStorage() {
   if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((message) => {
       if (message.type === "FIELDS_DISCOVERED") {
-        acceptLivePageFields(message.fields);
+        acceptLivePageFields(message.fields, {
+          reset: Boolean(message.reset),
+          pageLang: message.pageLang,
+        });
       } else if (message.type === "FIELD_CHANGED") {
         const { id, value } = message;
         let found = false;
         for (let i = 0; i < fields.length; i++) {
           if (fields[i].id === id) {
+            fields[i].formValue = value;
             fields[i].value = value;
             fields[i].status = "not_checked";
+            fields[i].decision = null;
+            fields[i].pendingCorrection = null;
+            fields[i].extractedValue = null;
+            fields[i].heardTranscript = "";
+            fields[i].editedByUser = false;
             found = true;
             break;
           }
@@ -633,15 +765,16 @@ function listenToSessionStorage() {
         } else {
           queryActiveTabForFields((fresh) => {
             if (fresh) {
-              updateFromStorage(fresh);
+              updateFromStorage(mergeDetectedWithSession(fresh), { preserveIndex: true });
               renderCurrentField();
             }
           });
         }
       } else if (message.type === "SESSION_CLEARED") {
         fields = [];
+        currentFieldIndex = 0;
         detectDefaultStatus();
-        switchScreen("screen-homepage");
+        switchScreen("screen-homepage", { force: true });
       }
     });
   }
@@ -657,6 +790,9 @@ function queryActiveTabForFields(callback) {
         event.data.fields
       ) {
         resolved = true;
+        if (event.data.pageLang !== undefined) {
+          pageLangHint = event.data.pageLang || "";
+        }
         window.removeEventListener("message", msgHandler);
         if (callback) callback(event.data.fields);
       }
@@ -681,6 +817,9 @@ function queryActiveTabForFields(callback) {
         if (chrome.runtime.lastError || !response?.fields) {
           if (callback) callback(null);
           return;
+        }
+        if (response.pageLang !== undefined) {
+          pageLangHint = response.pageLang || "";
         }
         if (callback) callback(response.fields);
       });
@@ -721,7 +860,7 @@ function detectDefaultStatus() {
   }
 }
 
-function updateFromStorage(fieldMap) {
+function updateFromStorage(fieldMap, options = {}) {
   fields = Object.values(fieldMap || {});
   if (fields.length === 0) {
     if (homeDetectedCount) homeDetectedCount.textContent = "Waiting for form fields...";
@@ -730,34 +869,32 @@ function updateFromStorage(fieldMap) {
   if (homeDetectedCount) {
     homeDetectedCount.textContent = `${fields.length} fields ready to verify.`;
   }
-  if (currentFieldIndex >= fields.length) currentFieldIndex = 0;
+  if (!options.preserveIndex || currentFieldIndex >= fields.length || currentFieldIndex < 0) {
+    currentFieldIndex = 0;
+  }
   
-  // Detect language from labels
-  detectLanguageFromFields();
+  // Detect language of the form itself (for STT & autofill, separate from Hindi TTS)
+  detectLanguageFromFields(options.pageLang);
   renderCurrentField();
   renderSummaryTable();
   updateProgressBar();
 }
 
-function detectLanguageFromFields() {
-  let devanagariCount = 0;
-  fields.forEach((f) => {
-    const text = `${f.label || ""} ${f.value || ""}`;
-    for (let i = 0; i < text.length; i++) {
-      const code = text.charCodeAt(i);
-      if (code >= 0x0900 && code <= 0x097f) {
-        devanagariCount++;
-      }
-    }
-  });
+function getSttLanguageCode() {
+  return detectedFormLanguage || detectFormLanguage(fields, pageLangHint) || selectedLanguage || "en-IN";
+}
+
+function detectLanguageFromFields(explicitPageLang = undefined) {
+  if (explicitPageLang !== undefined) {
+    pageLangHint = explicitPageLang || "";
+  }
+  detectedFormLanguage = detectFormLanguage(fields, pageLangHint);
+  saveSetting("detectedFormLanguage", detectedFormLanguage);
 
   if (detectedLangBadge) {
-    if (devanagariCount > 0) {
-      detectedLangBadge.textContent = "Hindi (हिंदी - hi-IN)";
-    } else {
-      detectedLangBadge.textContent = "English (India - en-IN)";
-    }
+    detectedLangBadge.textContent = getLanguageDisplayLabel(detectedFormLanguage);
   }
+  return detectedFormLanguage;
 }
 
 function saveSetting(key, val) {
@@ -788,7 +925,10 @@ async function handleAllowMic() {
     micPermission = "denied";
     saveSetting("micPermission", "denied");
     updateMicStatusBadge();
-    alert("Microphone permission was not granted. Voice verification will be manual.");
+    if (vadIndicator) {
+      vadIndicator.textContent = "⚠️ Mic Blocked! Click browser address bar icon to allow.";
+      vadIndicator.className = "vad-indicator speaking";
+    }
     switchScreen("screen-homepage");
   }
 }
@@ -827,26 +967,54 @@ async function testMicrophone() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     setTimeout(() => {
       stream.getTracks().forEach((t) => t.stop());
-      alert("✓ Microphone test successful! Audio input is working.");
+      if (vadIndicator) {
+        vadIndicator.textContent = "✓ Microphone test successful! Audio input is working.";
+        vadIndicator.className = "vad-indicator idle";
+      }
     }, 1500);
   } catch (err) {
-    alert("Microphone test failed: " + err.message);
+    if (vadIndicator) {
+      vadIndicator.textContent = `⚠️ Microphone test failed: ${err.message}`;
+      vadIndicator.className = "vad-indicator speaking";
+    }
   }
 }
 
 // -------------------------------------------------------------------
 // SCREEN 3: VERIFICATION FLOW & RENDERING
 // -------------------------------------------------------------------
-function renderCurrentField() {
+function renderCurrentField(options = {}) {
   if (!fields[currentFieldIndex]) return;
   const current = fields[currentFieldIndex];
+  const displayVal = current.value || "";
 
   const fieldNumberEl = document.getElementById("field-number");
   if (fieldNumberEl) fieldNumberEl.textContent = `${currentFieldIndex + 1}.)`;
 
   if (fieldLabel) fieldLabel.textContent = current.label || current.id;
   if (fieldKind) fieldKind.textContent = (current.kind || "text").toUpperCase();
-  if (fieldValueLarge) fieldValueLarge.textContent = current.value || "—";
+  if (fieldValueLarge) fieldValueLarge.textContent = displayVal || "— (Blank / खाली)";
+
+  if (fieldEditInput && !options.skipInputSync) {
+    if (typeof document === "undefined" || document.activeElement !== fieldEditInput) {
+      fieldEditInput.value = displayVal;
+    }
+  }
+
+  if (sessionFormRef) {
+    const origForm = (current.formValue !== undefined ? current.formValue : "").trim();
+    const curTrim = displayVal.trim();
+    if (!origForm && curTrim) {
+      sessionFormRef.textContent = `Unfilled on form → Session DB: "${curTrim}"`;
+      sessionFormRef.classList.remove("hidden");
+    } else if (origForm && curTrim && origForm !== curTrim) {
+      sessionFormRef.textContent = `Form value: "${origForm}" → Session DB: "${curTrim}"`;
+      sessionFormRef.classList.remove("hidden");
+    } else {
+      sessionFormRef.classList.add("hidden");
+      sessionFormRef.textContent = "";
+    }
+  }
 
   const remainingEl = document.getElementById("field-remaining-count");
   if (remainingEl) {
@@ -859,7 +1027,7 @@ function renderCurrentField() {
     fieldStatusChip.textContent = formatStatus(current.status);
   }
 
-  renderSpelledBubbles(current.value, current.kind);
+  renderSpelledBubbles(displayVal, current.kind);
   updateProgressBar();
 
   if (btnPrevField) btnPrevField.disabled = currentFieldIndex === 0;
@@ -870,7 +1038,9 @@ function renderCurrentField() {
     if (heardTranscript) heardTranscript.textContent = `"${current.heardTranscript}"`;
     if (heardAction) {
       if (current.pendingCorrection) {
-        heardAction.innerHTML = `Extracted Correction: <strong>${current.pendingCorrection}</strong>`;
+        heardAction.innerHTML = `Extracted: <strong>${current.pendingCorrection}</strong>`;
+      } else if (current.status === "filled" && current.extractedValue) {
+        heardAction.innerHTML = `Filled: <strong>${current.extractedValue}</strong>`;
       } else if (current.instruction) {
         heardAction.innerHTML = `Instruction: <strong>${current.instruction}</strong>`;
       } else {
@@ -890,6 +1060,7 @@ function renderCurrentField() {
 function formatStatus(status) {
   switch (status) {
     case "match": return "MATCH";
+    case "filled": return "FILLED";
     case "mismatch": return "MISMATCH";
     case "unsure": return "UNSURE";
     default: return "NOT CHECKED";
@@ -931,15 +1102,22 @@ function navigateField(delta) {
   }
 }
 
-function stopCurrentInteractions() {
+function stopCurrentInteractions(options = {}) {
   stopAudioPlayback();
-  cancelVoiceCapture();
-  continuousController = null;
-  isAudioPlayingState = false; // FIXED: using the local state variable instead of the importaed function
+  isMicPaused = true;
+  if (continuousController) {
+    if (options.forceCancel) {
+      cancelVoiceCapture();
+      continuousController = null;
+    } else {
+      pauseContinuousListening();
+    }
+  }
+  isAudioPlayingState = false;
   isVoiceCapturing = false;
   resetVoiceButtonUI();
   if (vadIndicator) {
-    vadIndicator.textContent = "Idle";
+    vadIndicator.textContent = "Mic paused (TTS mode) — Tap Paused to speak edits";
     vadIndicator.className = "vad-indicator idle";
   }
 }
@@ -949,6 +1127,7 @@ function resetVoiceButtonUI() {
   voiceIconStop?.classList.add("hidden");
   voiceWaveBars?.classList.add("hidden");
   btnVoiceToggle?.classList.remove("recording");
+  btnVoiceToggle?.classList.toggle("muted", isMicPaused);
   if (voiceBtnSub) voiceBtnSub.textContent = isMicPaused ? "Paused" : "Auto";
 }
 
@@ -977,8 +1156,8 @@ function getFieldSpeechPhrase(field) {
  * Ensures continuous background listening is active with instant barge-in
  */
 async function ensureContinuousListening(force = false) {
-  if (isMicPaused) return;
-  if (!force && continuousController && isContinuousListeningActive()) return;
+  if (isMicPaused) return false;
+  if (!force && continuousController && isContinuousListeningActive()) return true;
 
   try {
     continuousController = await startContinuousListening({
@@ -1009,12 +1188,11 @@ async function ensureContinuousListening(force = false) {
         }
       },
       onSpeechEnd: async (wavBlob) => {
+        // Auto-off after single utterance so TTS readback on the next question stays undisturbed
+        isMicPaused = true;
         isVoiceCapturing = false;
-        btnVoiceToggle?.classList.remove("recording");
-        voiceWaveBars?.classList.add("hidden");
-        voiceIconPlay?.classList.remove("hidden");
-        voiceIconStop?.classList.add("hidden");
-        if (voiceBtnSub) voiceBtnSub.textContent = "Auto";
+        pauseContinuousListening();
+        resetVoiceButtonUI();
         if (vadIndicator) {
           vadIndicator.textContent = "Processing reply... (जाँच जारी है)";
           vadIndicator.className = "vad-indicator idle";
@@ -1025,13 +1203,17 @@ async function ensureContinuousListening(force = false) {
     });
 
     if (voiceBtnSub) voiceBtnSub.textContent = "Auto";
-    btnVoiceToggle?.classList.remove("recording");
+    btnVoiceToggle?.classList.remove("muted", "recording");
+    return true;
   } catch (err) {
     console.warn("[Jaanch Mic] Continuous mic init:", err?.message);
+    isMicPaused = true;
+    resetVoiceButtonUI();
     if (vadIndicator) {
       vadIndicator.textContent = "⚠️ Mic Blocked! Click browser address bar icon to allow.";
       vadIndicator.className = "vad-indicator speaking";
     }
+    return false;
   }
 }
 
@@ -1042,6 +1224,14 @@ async function speakCurrentField() {
   const current = fields[currentFieldIndex];
   if (!current) return;
 
+  // Ensure mic is paused during TTS verification so readback is never interrupted
+  if (!isMicPaused || isVoiceCapturing) {
+    isMicPaused = true;
+    isVoiceCapturing = false;
+    pauseContinuousListening();
+    resetVoiceButtonUI();
+  }
+
   stopAudioPlayback();
   const phrase = getFieldSpeechPhrase(current);
 
@@ -1051,11 +1241,9 @@ async function speakCurrentField() {
   }
   if (btnTtsSpeak) btnTtsSpeak.classList.add("active");
 
-  // Arm continuous listening so customer can barge in at any moment
-  ensureContinuousListening();
-
   await playTTSPhrase(phrase, {
     voice: selectedVoice,
+    lang: TTS_LANGUAGE,
     proxyUrl: PROXY_URL,
     onStart: () => {
       if (btnTtsSpeak) btnTtsSpeak.classList.add("active");
@@ -1063,7 +1251,10 @@ async function speakCurrentField() {
     onEnd: () => {
       if (btnTtsSpeak) btnTtsSpeak.classList.remove("active");
       if (vadIndicator && !isVoiceCapturing) {
-        vadIndicator.textContent = "Listening for reply... (सुन रहे हैं)";
+        vadIndicator.textContent = isMicPaused
+          ? "Mic paused (TTS mode) — Tap Paused to speak edits"
+          : "Listening for reply... (सुन रहे हैं)";
+        vadIndicator.className = "vad-indicator idle";
       }
     }
   });
@@ -1072,97 +1263,139 @@ async function speakCurrentField() {
 }
 
 /**
- * Voice Capture Toggle Button: Toggles Pause / Auto Listening
+ * Voice Capture Toggle Button: Toggles Pause (TTS verify) / Auto (single-turn STT edit)
  */
 async function toggleVoiceRecording() {
   resumeAudioContext();
-  resumeVadAudioContext();
+  const sttLang = getSttLanguageCode();
 
   if (isMicPaused) {
+    stopAudioPlayback();
     isMicPaused = false;
-    resumeContinuousListening();
+    await resumeVadAudioContext();
+    await resumeContinuousListening();
+    const vadState = getVadState();
+    const needStart = !continuousController || !vadState.listening || !isContinuousListeningActive();
+    const started = await ensureContinuousListening(needStart);
+    if (!started) return;
+
     btnVoiceToggle?.classList.remove("muted");
-    if (voiceBtnSub) voiceBtnSub.textContent = "Listening";
+    if (voiceBtnSub) voiceBtnSub.textContent = "Auto";
     if (vadIndicator) {
-      vadIndicator.textContent = "Listening for reply... Speak now (बोलिए)";
+      vadIndicator.textContent = `Listening (${sttLang})... Speak now (बोलिए)`;
       vadIndicator.className = "vad-indicator idle";
     }
-    await ensureContinuousListening(true);
+    checkProxyHealth().then((online) => {
+      if (!online && !isMicPaused && !isVoiceCapturing && vadIndicator) {
+        vadIndicator.textContent = "Mic ON, speech proxy offline (127.0.0.1:8000). Start proxy/main.py or edit Session DB.";
+        vadIndicator.className = "vad-indicator speaking";
+      }
+    });
     return;
   }
 
-  // If not currently capturing or suspended, actively prime/arm listening
-  if (!continuousController || !isContinuousListeningActive()) {
+  const resumed = await resumeVadAudioContext();
+  const vadState = getVadState();
+
+  // If VAD was not running yet (or AudioContext just woke up), arm continuous listening instead of pausing
+  if (!continuousController || (!resumed && !vadState.listening) || !isContinuousListeningActive()) {
     isMicPaused = false;
+    const started = await ensureContinuousListening(true);
+    if (!started) return;
     btnVoiceToggle?.classList.remove("muted");
-    if (voiceBtnSub) voiceBtnSub.textContent = "Listening";
+    if (voiceBtnSub) voiceBtnSub.textContent = "Auto";
     if (vadIndicator) {
-      vadIndicator.textContent = "Listening for reply... Speak now (बोलिए)";
+      vadIndicator.textContent = `Listening (${sttLang})... Speak now (बोलिए)`;
       vadIndicator.className = "vad-indicator idle";
     }
-    await ensureContinuousListening(true);
   } else {
-    // Already actively capturing: clicking again toggles pause
+    // Already actively capturing: clicking again pauses mic back into TTS-verify mode
     isMicPaused = true;
+    isVoiceCapturing = false;
     pauseContinuousListening();
     stopAudioPlayback();
-    if (voiceBtnSub) voiceBtnSub.textContent = "Paused";
-    btnVoiceToggle?.classList.add("muted");
+    resetVoiceButtonUI();
     if (vadIndicator) {
-      vadIndicator.textContent = "Microphone paused. Click Auto to resume.";
+      vadIndicator.textContent = "Mic paused (TTS mode) — Tap Paused to speak edits";
       vadIndicator.className = "vad-indicator idle";
     }
   }
 }
 
 async function listenForCustomerReply() {
-  ensureContinuousListening(true);
+  isMicPaused = false;
+  await resumeVadAudioContext();
+  await ensureContinuousListening(true);
 }
 
-/**
- * Extracts candidate spoken value from transcript for comparison against filled answer
- */
-function extractCandidateForField(transcript, kind) {
-  if (!transcript) return null;
-  const k = (kind || "").toLowerCase();
-
-  if (k === "digits") {
-    const norm = normalizeDigits(transcript);
-    return norm && norm.length >= 2 ? norm : null;
+async function blobToBase64(blob) {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
   }
+  return btoa(binary);
+}
 
-  if (k === "date") {
-    const ascii = devanagariToAscii(transcript);
-    const numMatch = ascii.match(/\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})\b/);
-    if (numMatch) return numMatch[1];
+function sendProxyRuntimeMessage(payload) {
+  return new Promise((resolve) => {
+    if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+      resolve(null);
+      return;
+    }
+    chrome.runtime.sendMessage(payload, (response) => {
+      if (chrome.runtime.lastError) {
+        resolve({ ok: false, networkError: true, error: chrome.runtime.lastError.message });
+        return;
+      }
+      resolve(response || null);
+    });
+  });
+}
 
-    const textMatch = ascii.match(/\b(\d{1,2}\s+[A-Za-z\u0900-\u097F]+\s+\d{4})\b/);
-    if (textMatch) return textMatch[1];
+async function requestSttTranscript(wavBlob) {
+  const sttLanguage = getSttLanguageCode();
+  try {
+    const formData = new FormData();
+    formData.append("audio_file", wavBlob, "reply.wav");
+    formData.append("language_code", sttLanguage);
 
-    const parsed = parseDate(transcript);
-    if (parsed) return parsed.formatted;
-    return null;
+    const resp = await fetch(`${PROXY_URL}/stt`, {
+      method: "POST",
+      headers: {
+        "X-Session-ID": jaanchSessionId,
+      },
+      body: formData,
+      signal: AbortSignal.timeout(12000),
+    });
+
+    let data = null;
+    try {
+      data = await resp.json();
+    } catch (e) {}
+    return {
+      ok: resp.ok,
+      status: resp.status,
+      data,
+      detail: data?.detail || (resp.ok ? "" : `HTTP ${resp.status}`),
+    };
+  } catch (directErr) {
+    // Embedded https:// iframes can have loopback fetches blocked by PNA/Mixed-Content; relay via MV3 worker
+    const wavBase64 = await blobToBase64(wavBlob);
+    const relayed = await sendProxyRuntimeMessage({
+      type: "PROXY_STT",
+      proxyUrl: PROXY_URL,
+      wavBase64,
+      languageCode: sttLanguage,
+      sessionId: jaanchSessionId,
+    });
+    if (relayed && typeof relayed.status === "number") {
+      return relayed;
+    }
+    return { ok: false, networkError: true, error: relayed?.error || directErr?.message };
   }
-
-  if (k === "name") {
-    const clean = transcript
-      .replace(/(?:mera\s+naam|meri\s+naam|naam|mera|meri|hai|hain|tha|thi|the|bhai|ji|sahab|sir|madam|sahi|galat|nahi|nahin|shri|smt|mr|mrs|miss|dr)\b/gi, "")
-      .replace(/[,\.\-\/\\:;!?'"()]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    return clean || null;
-  }
-
-  if (k === "district") {
-    const clean = transcript
-      .replace(/(?:district|zilla|zila|shehar|city|hai|hain|mera|meri|ji|sahab|sahi|galat|nahi|nahin)\b/gi, "")
-      .replace(/[,\.\-\/\\:;!?'"()]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    return clean || null;
-  }
-
-  return null;
 }
 
 async function processAudioReply(wavBlob) {
@@ -1175,246 +1408,191 @@ async function processAudioReply(wavBlob) {
   }
 
   let transcript = "";
-  try {
-    const formData = new FormData();
-    formData.append("audio_file", wavBlob, "reply.wav");
-    formData.append("language_code", selectedLanguage);
+  let sttErrorMsg = "";
+  const sttRes = await requestSttTranscript(wavBlob);
 
-    const resp = await fetch(`${PROXY_URL}/stt`, {
-      method: "POST",
-      body: formData,
-      signal: AbortSignal.timeout(6000)
-    });
-
-    if (resp.ok) {
-      const data = await resp.json();
-      transcript = (data.transcript || "").trim();
+  if (sttRes.ok) {
+    isProxyReachable = true;
+    transcript = (sttRes.data?.transcript || "").trim();
+  } else if (sttRes.networkError || !sttRes.status) {
+    isProxyReachable = false;
+    console.warn("[Jaanch Audio Debug] STT network error");
+    sttErrorMsg = "Speech proxy unreachable (127.0.0.1:8000). Start proxy/main.py or edit Session DB below.";
+  } else {
+    isProxyReachable = true;
+    const detail = sttRes.detail || `HTTP ${sttRes.status}`;
+    console.warn(`[Jaanch Audio Debug] STT failure ${sttRes.status}`);
+    if (sttRes.status === 402) {
+      sttErrorMsg = "Daily speech budget reached. Type edit directly in Session DB below.";
+    } else if (sttRes.status === 400) {
+      sttErrorMsg = "Audio clip too short/noisy. Speak clearly and try again.";
     } else {
-      console.warn(`[Jaanch Audio Debug] STT HTTP ${resp.status}`);
+      sttErrorMsg = `Speech service error (${detail}). You can type directly below.`;
     }
-  } catch (e) {
-    console.warn(`[Jaanch Audio Debug] STT error/timeout (${e?.message})`);
   }
 
-  if (!transcript) {
+  if (sttErrorMsg) {
     if (vadIndicator) {
-      vadIndicator.textContent = "Speech heard, but server returned no text. Tap (✔) or (✖) to decide.";
-      vadIndicator.className = "vad-indicator idle";
-    }
-    return;
-  }
-
-  // Deterministic intent classification
-  const classification = classifyReply(transcript, {
-    targetField: current.id,
-    targetKind: current.kind
-  });
-
-  current.heardTranscript = transcript;
-  current.intent = classification.intent;
-
-  const kind = (current.kind || "").toLowerCase();
-  const filledVal = (current.value || "").trim();
-
-  // 1. Repeat request
-  if (classification.intent === "repeat") {
-    if (vadIndicator) vadIndicator.textContent = "Repeating prompt (पुनः सुनिए)...";
-    setTimeout(() => speakCurrentField(), 500);
-    return;
-  }
-
-  // 2. Hold request
-  if (classification.intent === "hold") {
-    if (vadIndicator) vadIndicator.textContent = "Hold requested (रुके हैं)... Tap Auto or speak when ready.";
-    return;
-  }
-
-  // 3. Explicit Confirmation (e.g. "हाँ सही है", "yes", "correct")
-  if (classification.intent === "confirm") {
-    current.status = "match";
-    current.pendingCorrection = null;
-    saveFieldsToSession();
-    renderCurrentField();
-    if (vadIndicator) {
-      vadIndicator.textContent = "Confirmed! Value matches (सत्यापित).";
-      vadIndicator.className = "vad-indicator idle";
-    }
-
-    autoAdvanceTimer = setTimeout(() => {
-      autoAdvanceTimer = null;
-      if (currentFieldIndex < fields.length - 1) {
-        navigateField(1);
-        speakCurrentField();
-      } else {
-        switchScreen("screen-summary");
-      }
-    }, 700);
-    return;
-  }
-
-  // 4. Candidate value comparison against filled answer
-  let candidateValue = classification.new_value;
-  if (!candidateValue) {
-    candidateValue = extractCandidateForField(transcript, kind);
-  }
-
-  if (kind === "digits" && candidateValue) {
-    const comp = compareDigits(filledVal, candidateValue);
-    if (comp.status === "match") {
-      current.status = "match";
-      current.pendingCorrection = null;
-      saveFieldsToSession();
-      renderCurrentField();
-      if (vadIndicator) {
-        vadIndicator.textContent = `Match! Spoken digits ${comp.normB} verify filled answer (सत्यापित).`;
-        vadIndicator.className = "vad-indicator idle";
-      }
-      autoAdvanceTimer = setTimeout(() => {
-        autoAdvanceTimer = null;
-        if (currentFieldIndex < fields.length - 1) {
-          navigateField(1);
-          speakCurrentField();
-        } else {
-          switchScreen("screen-summary");
-        }
-      }, 700);
-      return;
-    } else {
-      current.status = "mismatch";
-      current.pendingCorrection = comp.normB;
-      saveFieldsToSession();
-      renderCurrentField();
-      if (vadIndicator) {
-        vadIndicator.textContent = `Mismatch! Spoken: ${comp.normB} vs Filled: ${filledVal}`;
-        vadIndicator.className = "vad-indicator speaking";
-      }
-      return;
-    }
-  }
-
-  if (kind === "date" && candidateValue) {
-    const comp = compareDates(filledVal, candidateValue);
-    if (comp.status === "match") {
-      current.status = "match";
-      current.pendingCorrection = null;
-      saveFieldsToSession();
-      renderCurrentField();
-      if (vadIndicator) {
-        vadIndicator.textContent = `Match! Spoken date ${comp.parsedB.formatted} verifies filled answer (सत्यापित).`;
-        vadIndicator.className = "vad-indicator idle";
-      }
-      autoAdvanceTimer = setTimeout(() => {
-        autoAdvanceTimer = null;
-        if (currentFieldIndex < fields.length - 1) {
-          navigateField(1);
-          speakCurrentField();
-        } else {
-          switchScreen("screen-summary");
-        }
-      }, 700);
-      return;
-    } else if (comp.status === "mismatch") {
-      const swapped = comp.reason === "day_month_swapped" ? " (Day/month swapped!)" : "";
-      const displayVal = comp.parsedB?.formatted || candidateValue;
-      current.status = "mismatch";
-      current.pendingCorrection = displayVal;
-      saveFieldsToSession();
-      renderCurrentField();
-      if (vadIndicator) {
-        vadIndicator.textContent = `Mismatch! Spoken: ${displayVal} vs Filled: ${filledVal}${swapped}`;
-        vadIndicator.className = "vad-indicator speaking";
-      }
-      return;
-    }
-  }
-
-  if (kind === "name" && candidateValue) {
-    const comp = compareName(filledVal, candidateValue);
-    if (comp.status === "match") {
-      current.status = "match";
-      current.pendingCorrection = null;
-      saveFieldsToSession();
-      renderCurrentField();
-      if (vadIndicator) {
-        vadIndicator.textContent = `Match! Spoken name "${comp.cleanB}" verifies filled answer (सत्यापित).`;
-        vadIndicator.className = "vad-indicator idle";
-      }
-      autoAdvanceTimer = setTimeout(() => {
-        autoAdvanceTimer = null;
-        if (currentFieldIndex < fields.length - 1) {
-          navigateField(1);
-          speakCurrentField();
-        } else {
-          switchScreen("screen-summary");
-        }
-      }, 700);
-      return;
-    } else if (comp.status === "mismatch") {
-      current.status = "mismatch";
-      current.pendingCorrection = comp.cleanB;
-      saveFieldsToSession();
-      renderCurrentField();
-      if (vadIndicator) {
-        vadIndicator.textContent = `Mismatch! Spoken: "${comp.cleanB}" vs Filled: "${filledVal}"`;
-        vadIndicator.className = "vad-indicator speaking";
-      }
-      return;
-    }
-  }
-
-  if (kind === "district" && candidateValue) {
-    const comp = compareDistrict(filledVal, candidateValue);
-    if (comp.status === "match") {
-      current.status = "match";
-      current.pendingCorrection = null;
-      saveFieldsToSession();
-      renderCurrentField();
-      if (vadIndicator) {
-        vadIndicator.textContent = `Match! Spoken district "${comp.cleanB}" verifies filled answer (सत्यापित).`;
-        vadIndicator.className = "vad-indicator idle";
-      }
-      autoAdvanceTimer = setTimeout(() => {
-        autoAdvanceTimer = null;
-        if (currentFieldIndex < fields.length - 1) {
-          navigateField(1);
-          speakCurrentField();
-        } else {
-          switchScreen("screen-summary");
-        }
-      }, 700);
-      return;
-    } else if (comp.status === "mismatch") {
-      current.status = "mismatch";
-      current.pendingCorrection = comp.cleanB;
-      saveFieldsToSession();
-      renderCurrentField();
-      if (vadIndicator) {
-        vadIndicator.textContent = `Mismatch! Spoken: "${comp.cleanB}" vs Filled: "${filledVal}"`;
-        vadIndicator.className = "vad-indicator speaking";
-      }
-      return;
-    }
-  }
-
-  // 5. Citizen reported error without candidate value (e.g. "नहीं", "गलत है")
-  if (classification.intent === "reject") {
-    current.status = "mismatch";
-    current.pendingCorrection = null;
-    saveFieldsToSession();
-    renderCurrentField();
-    if (vadIndicator) {
-      vadIndicator.textContent = "Customer reported error (गलत है). Please speak correction or tap Cross (✖).";
+      vadIndicator.textContent = sttErrorMsg;
       vadIndicator.className = "vad-indicator speaking";
     }
     return;
   }
 
-  // 6. Unclear reply
+  if (!transcript) {
+    if (vadIndicator) {
+      vadIndicator.textContent = "Speech heard, but no words recognized. Speak clearly or edit Session DB below.";
+      vadIndicator.className = "vad-indicator idle";
+    }
+    return;
+  }
+
+  // Deterministic pipeline stage: STT -> Small Field Extractor -> Editable Session DB
+  const extraction = extractFieldsFromTranscript(transcript, fields, {
+    activeFieldId: current.id,
+    currentIndex: currentFieldIndex,
+    formLanguage: getSttLanguageCode(),
+  });
+
+  // 1. Repeat request
+  if (extraction.action === "repeat") {
+    current.heardTranscript = transcript;
+    current.intent = "repeat";
+    renderCurrentField();
+    if (vadIndicator) vadIndicator.textContent = "Repeating prompt (पुनः सुनिए)...";
+    setTimeout(() => speakCurrentField(), 450);
+    return;
+  }
+
+  // 2. Hold request
+  if (extraction.action === "hold") {
+    current.heardTranscript = transcript;
+    current.intent = "hold";
+    renderCurrentField();
+    if (vadIndicator) vadIndicator.textContent = "Hold requested (रुके हैं)... Speak or edit when ready.";
+    return;
+  }
+
+  // 3. Apply extractor updates into Editable Session DB
+  if (extraction.updates && extraction.updates.length > 0) {
+    const updatedFields = [];
+    for (const u of extraction.updates) {
+      const targetField = fields.find((f) => f.id === u.fieldId);
+      if (!targetField) continue;
+
+      targetField.transcript = transcript;
+      targetField.heardTranscript = transcript;
+      targetField.intent = u.intent;
+      targetField.instruction = u.instruction || null;
+      targetField.extractedValue = u.extractedValue;
+      targetField.decision = u.decision;
+      targetField.editedByUser = false;
+      targetField.updatedAt = Date.now();
+
+      if (u.intent === "correct_instruction") {
+        targetField.status = "mismatch";
+        targetField.pendingCorrection = u.extractedValue || null;
+        if (u.extractedValue) {
+          targetField.value = u.extractedValue;
+        }
+      } else if (u.status === "match") {
+        targetField.status = "match";
+        targetField.pendingCorrection = null;
+        if (u.value !== undefined && u.value !== null && u.value !== "") {
+          targetField.value = u.value;
+        }
+      } else if (u.status === "filled") {
+        // Save directly into Editable Session DB for unfilled columns
+        targetField.status = "filled";
+        targetField.pendingCorrection = null;
+        targetField.value = u.value;
+      } else if (u.status === "mismatch") {
+        targetField.status = "mismatch";
+        targetField.pendingCorrection = u.extractedValue || null;
+        if (u.extractedValue) {
+          targetField.value = u.extractedValue;
+        }
+      } else {
+        targetField.status = u.status || "unsure";
+        targetField.pendingCorrection = u.extractedValue || null;
+      }
+
+      updatedFields.push({ field: targetField, update: u });
+    }
+
+    saveFieldsToSession();
+    renderCurrentField();
+    renderSummaryTable();
+
+    const first = updatedFields[0];
+    if (updatedFields.length > 1) {
+      const summaryLabel = updatedFields.map(({ field, update }) => `${field.label?.split("/")[0]?.trim() || field.id}: "${update.value}"`).join(" • ");
+      if (vadIndicator) {
+        vadIndicator.textContent = `✓ Saved ${updatedFields.length} fields to Session DB: ${summaryLabel}`;
+        vadIndicator.className = "vad-indicator idle";
+      }
+      return;
+    }
+
+    if (first?.update?.intent === "correct_instruction") {
+      if (vadIndicator) {
+        vadIndicator.textContent = first.update.extractedValue
+          ? `Instruction suggested "${first.update.extractedValue}" in Session DB. Edit or tap ✔.`
+          : `Instruction heard: "${transcript}". Please edit Session DB value below.`;
+        vadIndicator.className = "vad-indicator speaking";
+      }
+      return;
+    }
+
+    if (first?.update?.status === "match") {
+      if (vadIndicator) {
+        vadIndicator.textContent = `✓ Match verified (${first.field.value || "OK"}). Moving to next field...`;
+        vadIndicator.className = "vad-indicator idle";
+      }
+      autoAdvanceTimer = setTimeout(() => {
+        autoAdvanceTimer = null;
+        if (currentFieldIndex < fields.length - 1) {
+          navigateField(1);
+          speakCurrentField();
+        } else {
+          switchScreen("screen-summary");
+        }
+      }, 650);
+      return;
+    }
+
+    if (first?.update?.status === "filled") {
+      if (vadIndicator) {
+        vadIndicator.textContent = `✓ Filled in Session DB: "${first.field.value}". Edit below, tap ✔ or Next.`;
+        vadIndicator.className = "vad-indicator idle";
+      }
+      return;
+    }
+
+    if (first?.update?.status === "mismatch") {
+      const orig = (first.update.formValue || "").trim();
+      if (vadIndicator) {
+        vadIndicator.textContent = first.update.extractedValue
+          ? `Updated Session DB: "${first.update.extractedValue}" (Form had "${orig}"). Edit or tap ✔.`
+          : "Customer reported error (गलत है). Speak value or edit Session DB below.";
+        vadIndicator.className = "vad-indicator speaking";
+      }
+      return;
+    }
+  }
+
+  // 4. Unclear fallback
+  current.heardTranscript = transcript;
+  current.transcript = transcript;
+  current.intent = extraction.intent || "unclear";
   current.status = "unsure";
   saveFieldsToSession();
   renderCurrentField();
+  renderSummaryTable();
   if (vadIndicator) {
-    vadIndicator.textContent = `Heard: "${transcript}". Unclear reply. Tap Tick (✔) or Cross (✖) to decide.`;
+    vadIndicator.textContent = extraction.unmatchedReason === "empty_field_needs_value"
+      ? "Field is blank — please speak the value or type it in Session DB below."
+      : `Heard: "${transcript}". Speak clearly or edit Session DB below.`;
     vadIndicator.className = "vad-indicator idle";
   }
 }
@@ -1481,46 +1659,82 @@ function handleFieldDecision(type) {
 // -------------------------------------------------------------------
 // SCREEN 4: VERIFICATION SUMMARY (MINIMALIST OPEN ROWS & APPLY)
 // -------------------------------------------------------------------
+function updateSummaryCounters() {
+  const badgeCount = document.getElementById("summary-badge-count");
+  if (badgeCount && fields.length > 0) {
+    const verifiedCount = fields.filter((f) => f.status === "match" || f.status === "filled").length;
+    const mismatchCount = fields.filter((f) => f.status === "mismatch").length;
+    if (mismatchCount > 0) {
+      badgeCount.textContent = `(${verifiedCount}/${fields.length} Ready • ${mismatchCount} Flagged)`;
+    } else {
+      badgeCount.textContent = `(${verifiedCount}/${fields.length} Ready)`;
+    }
+  }
+}
+
 function renderSummaryTable() {
   if (!summaryTableBody) return;
   summaryTableBody.innerHTML = "";
-
-  // Live Status Summary Counter
-  const badgeCount = document.getElementById("summary-badge-count");
-  if (badgeCount && fields.length > 0) {
-    const verifiedCount = fields.filter((f) => f.status === "match").length;
-    const mismatchCount = fields.filter((f) => f.status === "mismatch").length;
-    if (mismatchCount > 0) {
-      badgeCount.textContent = `(${verifiedCount}/${fields.length} Verified • ${mismatchCount} Flagged)`;
-    } else {
-      badgeCount.textContent = `(${verifiedCount}/${fields.length} Verified)`;
-    }
-  }
+  updateSummaryCounters();
 
   // Also update legacy list for unit tests
   if (summaryList) summaryList.innerHTML = "";
 
   fields.forEach((field, idx) => {
-    // Open-space row item (works natively in open div container)
     const row = document.createElement("div");
     row.className = "summary-row-item";
     const labelClean = (field.label || field.id).split("/")[0].trim();
     const statusClass = field.status || "not-checked";
     const statusText = formatStatus(field.status);
-    const statusIcon = field.status === "match" ? "✔ " : (field.status === "mismatch" ? "✖ " : "○ ");
+    const statusIcon = field.status === "match" || field.status === "filled" ? "✔ " : (field.status === "mismatch" ? "✖ " : "○ ");
 
-    row.innerHTML = `
-      <div class="row-left">
-        <span class="row-num">${idx + 1}.)</span>
-        <span class="row-label" title="${field.label || field.id}">${labelClean}</span>
-      </div>
-      <div class="row-value-col">
-        <span class="row-value" title="${field.value || "—"}">${field.value || "—"}</span>
-      </div>
-      <div class="row-status-col">
-        <span class="chip ${statusClass}">${statusIcon}${statusText}</span>
-      </div>
-    `;
+    const rowLeft = document.createElement("div");
+    rowLeft.className = "row-left";
+    const rowNum = document.createElement("span");
+    rowNum.className = "row-num";
+    rowNum.textContent = `${idx + 1}.)`;
+    const rowLabel = document.createElement("span");
+    rowLabel.className = "row-label";
+    rowLabel.title = field.label || field.id;
+    rowLabel.textContent = labelClean;
+    rowLeft.appendChild(rowNum);
+    rowLeft.appendChild(rowLabel);
+
+    const rowValueCol = document.createElement("div");
+    rowValueCol.className = "row-value-col";
+    const editInput = document.createElement("input");
+    editInput.type = "text";
+    editInput.className = "summary-edit-input";
+    editInput.value = field.value || "";
+    editInput.placeholder = "Blank (type or speak)";
+    editInput.setAttribute("data-field-id", field.id);
+
+    const statusBadgeCol = document.createElement("div");
+    statusBadgeCol.className = "row-status-col";
+    const chipEl = document.createElement("span");
+    chipEl.className = `chip ${statusClass}`;
+    chipEl.textContent = `${statusIcon}${statusText}`;
+    statusBadgeCol.appendChild(chipEl);
+
+    editInput.addEventListener("click", (e) => e.stopPropagation());
+    const onSummaryEdit = (e) => {
+      e.stopPropagation();
+      applyOperatorSessionEdit(field, e.target.value);
+      saveFieldsToSession();
+      const sClass = field.status || "not-checked";
+      const sText = formatStatus(field.status);
+      const sIcon = field.status === "match" || field.status === "filled" ? "✔ " : (field.status === "mismatch" ? "✖ " : "○ ");
+      chipEl.className = `chip ${sClass}`;
+      chipEl.textContent = `${sIcon}${sText}`;
+      updateSummaryCounters();
+    };
+    editInput.addEventListener("input", onSummaryEdit);
+    editInput.addEventListener("change", onSummaryEdit);
+
+    rowValueCol.appendChild(editInput);
+    row.appendChild(rowLeft);
+    row.appendChild(rowValueCol);
+    row.appendChild(statusBadgeCol);
 
     row.addEventListener("click", () => {
       currentFieldIndex = idx;
@@ -1533,47 +1747,100 @@ function renderSummaryTable() {
     if (summaryList) {
       const li = document.createElement("li");
       li.className = "summary-item";
-      li.innerHTML = `
-        <span class="summary-item-label">${field.label || field.id}: <strong>${field.value || "—"}</strong></span>
-        <span class="chip ${field.status || "not-checked"}">${formatStatus(field.status)}</span>
-      `;
+      const labelSpan = document.createElement("span");
+      labelSpan.className = "summary-item-label";
+      labelSpan.textContent = `${field.label || field.id}: `;
+      const strong = document.createElement("strong");
+      strong.textContent = field.value || "—";
+      labelSpan.appendChild(strong);
+      const chipSpan = document.createElement("span");
+      chipSpan.className = `chip ${field.status || "not-checked"}`;
+      chipSpan.textContent = formatStatus(field.status);
+      li.appendChild(labelSpan);
+      li.appendChild(chipSpan);
       summaryList.appendChild(li);
     }
   });
 }
 
+function finalizeAppliedFields(updatedCount) {
+  if (updatedCount > 0) {
+    fields.forEach((f) => {
+      if (f.value !== undefined && f.value !== null && String(f.value).trim() !== "") {
+        f.formValue = String(f.value);
+        if (f.status === "filled" || (f.status === "mismatch" && f.pendingCorrection)) {
+          f.status = "match";
+          f.decision = "match";
+          f.pendingCorrection = null;
+        }
+      }
+    });
+    saveFieldsToSession();
+    renderSummaryTable();
+    if (applyFeedback) {
+      applyFeedback.classList.remove("hidden");
+      applyFeedback.textContent = `✓ Autofilled ${updatedCount} field(s) on webpage with green highlight!`;
+      setTimeout(() => applyFeedback.classList.add("hidden"), 3500);
+    }
+  } else if (applyFeedback) {
+    applyFeedback.classList.remove("hidden");
+    applyFeedback.textContent = "⚠️ Could not locate matching inputs on webpage. Refresh page and retry.";
+    setTimeout(() => applyFeedback.classList.add("hidden"), 3500);
+  }
+}
+
 /**
  * Safe In-Page DOM Apply:
- * Updates the webpage input fields with approved values and pulses with green glow.
+ * Updates the webpage input fields with approved/edited Session DB values and pulses with green glow.
  * Invariant: NEVER submits the form!
  */
 function handleApplyChangesToForm() {
+  const payload = fields.map((f) => ({ id: f.id, value: f.value, status: f.status }));
+
+  if (isInIframe) {
+    let settled = false;
+    const onApplyResp = (event) => {
+      if (event.source !== window.parent) return;
+      if (event.data?.type === "JAANCH_APPLY_RESPONSE") {
+        settled = true;
+        window.removeEventListener("message", onApplyResp);
+        finalizeAppliedFields(Number(event.data.count) || 0);
+      }
+    };
+    window.addEventListener("message", onApplyResp);
+    try {
+      window.parent.postMessage({ type: "JAANCH_APPLY_FIELD_UPDATES", fields: payload }, "*");
+    } catch (e) {}
+    setTimeout(() => {
+      if (!settled) {
+        window.removeEventListener("message", onApplyResp);
+        finalizeAppliedFields(0);
+      }
+    }, 1000);
+    return;
+  }
+
   if (typeof chrome !== "undefined" && chrome.tabs?.query) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const activeTab = tabs[0];
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+      const activeTab = tabs && tabs[0];
       if (activeTab?.id) {
         chrome.tabs.sendMessage(
           activeTab.id,
-          {
-            type: "APPLY_FIELD_UPDATES",
-            fields: fields
-          },
+          { type: "APPLY_FIELD_UPDATES", fields: payload },
           (response) => {
-            if (applyFeedback) {
-              applyFeedback.classList.remove("hidden");
-              applyFeedback.textContent = "✓ Form inputs updated on webpage with green highlight!";
-              setTimeout(() => applyFeedback.classList.add("hidden"), 3000);
+            if (chrome.runtime.lastError) {
+              finalizeAppliedFields(0);
+              return;
             }
+            finalizeAppliedFields(Number(response?.count) || 0);
           }
         );
+      } else {
+        finalizeAppliedFields(0);
       }
     });
   } else {
-    if (applyFeedback) {
-      applyFeedback.classList.remove("hidden");
-      applyFeedback.textContent = "✓ Form inputs updated successfully!";
-      setTimeout(() => applyFeedback.classList.add("hidden"), 3000);
-    }
+    finalizeAppliedFields(payload.length);
   }
 }
 
@@ -1581,42 +1848,73 @@ function handleApplyChangesToForm() {
 // PROXY HEALTH CHECK & SESSION WIPING
 // -------------------------------------------------------------------
 async function checkProxyHealth() {
-  try {
-    const res = await fetch(`${PROXY_URL}/health`);
-    if (res.ok) {
-      const data = await res.json();
-      if (modeBadge) {
-        modeBadge.textContent = `${data.mode || "live"} mode`;
-        modeBadge.className = `mode-badge ${data.mode === "live" ? "live" : "fixture"}`;
-      }
+  const applyOnline = (data) => {
+    isProxyReachable = true;
+    if (modeBadge) {
+      modeBadge.textContent = `${data?.mode || "live"} mode`;
+      modeBadge.className = `mode-badge ${data?.mode === "live" ? "live" : "fixture"}`;
     }
-  } catch (e) {
+    return true;
+  };
+
+  const applyOffline = () => {
+    isProxyReachable = false;
     if (modeBadge) {
       modeBadge.textContent = "Offline (Sample)";
       modeBadge.className = "mode-badge fixture";
     }
+    return false;
+  };
+
+  try {
+    const res = await fetch(`${PROXY_URL}/health`, { signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      const data = await res.json();
+      return applyOnline(data);
+    }
+  } catch (e) {
+    // Fallback to service worker relay if iframe direct loopback fetch is blocked
   }
+
+  const relayed = await sendProxyRuntimeMessage({ type: "PROXY_HEALTH", proxyUrl: PROXY_URL });
+  if (relayed?.ok) {
+    return applyOnline(relayed.data);
+  }
+  return applyOffline();
 }
 
 function saveFieldsToSession() {
+  const fieldMap = {};
+  fields.forEach((f) => { fieldMap[f.id] = f; });
+  lastSavedFieldsSignature = JSON.stringify(fieldMap);
+
   if (typeof chrome !== "undefined" && chrome.storage?.session) {
-    const fieldMap = {};
-    fields.forEach((f) => { fieldMap[f.id] = f; });
     chrome.storage.session.set({ fields: fieldMap, lastActiveAt: Date.now() });
+  }
+  if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+    chrome.runtime.sendMessage({
+      type: "SESSION_FIELDS_UPDATED",
+      fields: Object.values(fieldMap),
+    }).catch(() => {});
   }
 }
 
 function wipeSessionData() {
-  stopCurrentInteractions();
+  isMicPaused = true;
+  stopCurrentInteractions({ keepVad: false, forceCancel: true });
   if (typeof chrome !== "undefined" && chrome.storage?.session) {
     chrome.storage.session.clear().then(() => {
       fields = [];
+      currentFieldIndex = 0;
+      lastSavedFieldsSignature = "";
       updateFromStorage({});
-      switchScreen("screen-homepage");
+      switchScreen("screen-homepage", { force: true });
     });
   } else {
     fields = [];
+    currentFieldIndex = 0;
+    lastSavedFieldsSignature = "";
     updateFromStorage({});
-    switchScreen("screen-homepage");
+    switchScreen("screen-homepage", { force: true });
   }
 }

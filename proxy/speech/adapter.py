@@ -1,19 +1,18 @@
 """
 Gnani Speech Adapter (proxy/speech/adapter.py)
-Stateless adapter for Gnani Prisma STT and Timbre TTS.
-Uses Python standard library (urllib.request) for maximum portability and zero-dependency reliability.
+Stateless async adapter for Gnani Prisma STT and Timbre TTS.
+Uses httpx.AsyncClient for non-blocking I/O inside FastAPI async routes.
 Supports Live, Record, Fixture, and Auto modes.
 """
 
 import sys
 import os
 import json
-import time
+import asyncio
 import hashlib
-import uuid
-import urllib.request
-import urllib.error
 from typing import Dict, Any, Optional
+
+import httpx
 
 _current_dir = os.path.dirname(os.path.abspath(__file__))
 _proxy_dir = os.path.abspath(os.path.join(_current_dir, ".."))
@@ -84,54 +83,52 @@ class LiveGnaniAdapter(BaseSpeechAdapter):
         validate_stt_audio(audio_bytes)
         url = f"{self.base_url}/stt/v3"
 
-        boundary = f"----JaanchBoundary{uuid.uuid4().hex}"
-        fields = {
+        data_fields = {
             "model": os.environ.get("STT_MODEL", "prisma-v2.5"),
             "language_code": language_code,
             "format": "transcribe"
         }
-        files = {
-            "audio_file": ("audio.wav", audio_bytes, "audio/wav")
-        }
-        body = encode_multipart_form(fields, files, boundary)
-
         headers = self._headers()
-        headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
-        headers["Content-Length"] = str(len(body))
 
         max_retries = 3
         backoff = 1.5
 
-        for attempt in range(max_retries):
-            req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-            try:
-                with urllib.request.urlopen(req, timeout=30.0) as resp:
-                    resp_bytes = resp.read()
-                    payload = json.loads(resp_bytes.decode("utf-8"))
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for attempt in range(max_retries):
+                try:
+                    resp = await client.post(
+                        url,
+                        data=data_fields,
+                        files={"audio_file": ("audio.wav", audio_bytes, "audio/wav")},
+                        headers=headers,
+                    )
+                    if resp.status_code == 401:
+                        raise SpeechAdapterError("Invalid Gnani API Key (401)", status_code=401, code="AUTH_FAILED")
+                    if resp.status_code == 402:
+                        raise OutOfCreditsError()
+                    if resp.status_code == 403:
+                        raise SpeechAdapterError("Forbidden: Gnani API permission denied (403)", status_code=403, code="FORBIDDEN")
+                    if resp.status_code in (429, 500, 502, 503, 504):
+                        if attempt == max_retries - 1:
+                            raise SpeechAdapterError(f"Gnani API error {resp.status_code}: {resp.text}", status_code=resp.status_code)
+                        await asyncio.sleep(backoff * (attempt + 1))
+                        continue
+                    if resp.status_code >= 400:
+                        raise SpeechAdapterError(f"Gnani API error {resp.status_code}: {resp.text}", status_code=resp.status_code)
+
+                    payload = resp.json()
                     return {
                         "transcript": payload.get("transcript", "").strip(),
                         "confidence": payload.get("confidence", 1.0),
                         "request_id": payload.get("request_id", ""),
                         "language": payload.get("language", language_code)
                     }
-            except urllib.error.HTTPError as exc:
-                err_text = exc.read().decode("utf-8", errors="replace")
-                if exc.code == 401:
-                    raise SpeechAdapterError("Invalid Gnani API Key (401)", status_code=401, code="AUTH_FAILED")
-                elif exc.code == 402:
-                    raise OutOfCreditsError()
-                elif exc.code == 403:
-                    raise SpeechAdapterError("Forbidden: Gnani API permission denied (403)", status_code=403, code="FORBIDDEN")
-                elif exc.code in (429, 500, 502, 503, 504):
+                except SpeechAdapterError:
+                    raise
+                except Exception as exc:
                     if attempt == max_retries - 1:
-                        raise SpeechAdapterError(f"Gnani API error {exc.code}: {err_text}", status_code=exc.code)
-                    time.sleep(backoff * (attempt + 1))
-                else:
-                    raise SpeechAdapterError(f"Gnani API error {exc.code}: {err_text}", status_code=exc.code)
-            except Exception as exc:
-                if attempt == max_retries - 1:
-                    raise SpeechAdapterError(f"Network error connecting to Gnani: {exc}", status_code=503)
-                time.sleep(backoff * (attempt + 1))
+                        raise SpeechAdapterError(f"Network error connecting to Gnani: {exc}", status_code=503)
+                    await asyncio.sleep(backoff * (attempt + 1))
 
     async def tts(self, text: str, voice: str = "Shivani", speed: float = 1.0) -> bytes:
         url = f"{self.base_url}/api/v1/tts/inference"
@@ -142,37 +139,36 @@ class LiveGnaniAdapter(BaseSpeechAdapter):
             "language": "hi-IN",
             "speed": max(0.75, min(1.5, speed))
         }
-        body = json.dumps(payload_data).encode("utf-8")
 
         headers = self._headers()
         headers["Content-Type"] = "application/json"
-        headers["Content-Length"] = str(len(body))
 
         max_retries = 3
         backoff = 1.5
 
-        for attempt in range(max_retries):
-            req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-            try:
-                with urllib.request.urlopen(req, timeout=30.0) as resp:
-                    pcm = resp.read()
-                    return wav_from_pcm(pcm, rate=48000, ch=1, bits=16)
-            except urllib.error.HTTPError as exc:
-                err_text = exc.read().decode("utf-8", errors="replace")
-                if exc.code == 401:
-                    raise SpeechAdapterError("Invalid Gnani API Key (401)", status_code=401, code="AUTH_FAILED")
-                elif exc.code == 402:
-                    raise OutOfCreditsError()
-                elif exc.code in (429, 500, 502, 503, 504):
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for attempt in range(max_retries):
+                try:
+                    resp = await client.post(url, json=payload_data, headers=headers)
+                    if resp.status_code == 401:
+                        raise SpeechAdapterError("Invalid Gnani API Key (401)", status_code=401, code="AUTH_FAILED")
+                    if resp.status_code == 402:
+                        raise OutOfCreditsError()
+                    if resp.status_code in (429, 500, 502, 503, 504):
+                        if attempt == max_retries - 1:
+                            raise SpeechAdapterError(f"TTS error {resp.status_code}: {resp.text}", status_code=resp.status_code)
+                        await asyncio.sleep(backoff * (attempt + 1))
+                        continue
+                    if resp.status_code >= 400:
+                        raise SpeechAdapterError(f"TTS error {resp.status_code}: {resp.text}", status_code=resp.status_code)
+
+                    return wav_from_pcm(resp.content, rate=48000, ch=1, bits=16)
+                except SpeechAdapterError:
+                    raise
+                except Exception as exc:
                     if attempt == max_retries - 1:
-                        raise SpeechAdapterError(f"TTS error {exc.code}: {err_text}", status_code=exc.code)
-                    time.sleep(backoff * (attempt + 1))
-                else:
-                    raise SpeechAdapterError(f"TTS error {exc.code}: {err_text}", status_code=exc.code)
-            except Exception as exc:
-                if attempt == max_retries - 1:
-                    raise SpeechAdapterError(f"Network error connecting to TTS: {exc}", status_code=503)
-                time.sleep(backoff * (attempt + 1))
+                        raise SpeechAdapterError(f"Network error connecting to TTS: {exc}", status_code=503)
+                    await asyncio.sleep(backoff * (attempt + 1))
 
 
 class FixtureGnaniAdapter(BaseSpeechAdapter):
@@ -255,6 +251,32 @@ class RecordGnaniAdapter(BaseSpeechAdapter):
         return wav_data
 
 
+class AutoGnaniAdapter(BaseSpeechAdapter):
+    """Checks saved local fixtures first to save credits, falling back to live Gnani on miss."""
+
+    def __init__(self, live_adapter: Optional[LiveGnaniAdapter], fixture_adapter: FixtureGnaniAdapter):
+        self.live = live_adapter
+        self.fixture = fixture_adapter
+
+    async def stt(self, audio_bytes: bytes, language_code: str = "hi-IN") -> Dict[str, Any]:
+        try:
+            return await self.fixture.stt(audio_bytes, language_code)
+        except FixtureNotFoundError:
+            if self.live is not None:
+                return await self.live.stt(audio_bytes, language_code)
+            raise
+
+    async def tts(self, text: str, voice: str = "Shivani", speed: float = 1.0) -> bytes:
+        t_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+        fixture_path = os.path.join(self.fixture.tts_dir, f"{t_hash}.wav")
+        if os.path.exists(fixture_path):
+            with open(fixture_path, "rb") as f:
+                return f.read()
+        if self.live is not None:
+            return await self.live.tts(text, voice, speed)
+        return await self.fixture.tts(text, voice, speed)
+
+
 def get_speech_adapter(mode: str, api_key: Optional[str] = None, base_url: str = "https://api.vachana.ai", fixtures_dir: Optional[str] = None) -> BaseSpeechAdapter:
     if fixtures_dir is None:
         fixtures_dir = os.path.join(os.path.dirname(__file__), "..", "fixtures")
@@ -274,6 +296,6 @@ def get_speech_adapter(mode: str, api_key: Optional[str] = None, base_url: str =
     elif mode == "record":
         return RecordGnaniAdapter(live_adapter, fixture_adapter)
     elif mode == "auto":
-        return live_adapter if api_key else fixture_adapter
+        return AutoGnaniAdapter(live_adapter, fixture_adapter)
 
     return fixture_adapter

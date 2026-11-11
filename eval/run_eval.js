@@ -168,10 +168,36 @@ function runEvaluation() {
   console.log(`- Value Extractions: ${correctValues} / ${totalValuesExpected}`);
   console.log(`- Zero-Tolerance Violations (values outside transcript): ${zeroToleranceViolations} (Target: 0)`);
 
+  const mdLines = [
+    "# Jaanch Evaluation Report",
+    "",
+    `- Generated: ${new Date().toISOString()}`,
+    `- Form Cases: ${cases.length}`,
+    `- Overall Detection Rate: ${overallDetectionRate}% (${totalDetectedErrors}/${totalSeededErrorCases} seeded errors)`,
+    `- False Flag Rate: ${falseFlagRate}% (${typeStats.clean_baseline.false_flags}/${typeStats.clean_baseline.total} false flags)`,
+    `- Intent Accuracy: ${intentAccuracy}% (${correctIntents}/${replies.length})`,
+    `- Value Extractions: ${correctValues}/${totalValuesExpected}`,
+    `- Zero Tolerance Violations: ${zeroToleranceViolations}`,
+    "",
+    "## Seeded-Error Breakdown",
+    "",
+    "| Error Type | Cases | Detected | Missed | Notes |",
+    "|---|---|---|---|---|",
+  ];
+  for (const [key, s] of Object.entries(typeStats)) {
+    const label = key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    if (key === "clean_baseline") {
+      mdLines.push(`| ${label} | ${s.total} | ${s.clean_passed} | ${s.false_flags} | ${s.notes} |`);
+    } else {
+      mdLines.push(`| ${label} | ${s.total} | ${s.detected} | ${s.missed} | ${s.notes} |`);
+    }
+  }
+  const mdContent = `${mdLines.join("\n")}\n`;
+
   console.log("\n===================================================================");
-  console.log(` OVERALL DETECTION RATE : ${overallDetectionRate}% (32/32 seeded errors)`);
-  console.log(` FALSE FLAG RATE        : ${falseFlagRate}% (0/8 false flags)`);
-  console.log(` INTENT ACCURACY        : ${intentAccuracy}% (${correctIntents}/30)`);
+  console.log(` OVERALL DETECTION RATE : ${overallDetectionRate}% (${totalDetectedErrors}/${totalSeededErrorCases} seeded errors)`);
+  console.log(` FALSE FLAG RATE        : ${falseFlagRate}% (${typeStats.clean_baseline.false_flags}/${typeStats.clean_baseline.total} false flags)`);
+  console.log(` INTENT ACCURACY        : ${intentAccuracy}% (${correctIntents}/${replies.length})`);
   console.log(` ZERO TOLERANCE STATUS  : ${zeroToleranceViolations === 0 ? "PASSED (100% compliant)" : "FAILED"}`);
   console.log("===================================================================\n");
 

@@ -4,6 +4,7 @@
  */
 
 import { playTTSPhrase } from "../lib/audio-player.js";
+import { detectFormLanguage, getLanguageDisplayLabel } from "../lib/extractor.js";
 
 // DOM Elements
 const micStatusChip = document.getElementById("mic-status-chip");
@@ -21,19 +22,27 @@ const btnPreviewVoice = document.getElementById("btn-preview-voice");
 
 const btnWipeSession = document.getElementById("btn-wipe-session");
 const wipeFeedback = document.getElementById("wipe-feedback");
+const sidebarProxyDot = document.getElementById("sidebar-proxy-dot");
+const sidebarProxyStatus = document.getElementById("sidebar-proxy-status");
+const aboutProxyDesc = document.getElementById("about-proxy-desc");
+const aboutProxyStatus = document.getElementById("about-proxy-status");
+
+const PROXY_URL = "http://127.0.0.1:8000";
 
 let audioTestContext = null;
 let audioTestStream = null;
 let audioTestAnimId = null;
+let isMicTesting = false;
 
 document.addEventListener("DOMContentLoaded", () => {
   setupSidebarNavigation();
   loadSettings();
   checkMicPermissionState();
+  refreshProxyStatus();
 
   // Event Listeners
   btnRequestMic?.addEventListener("click", requestMicrophoneAccess);
-  btnTestMic?.addEventListener("click", runLiveMicTest);
+  btnTestMic?.addEventListener("click", toggleLiveMicTest);
 
   selectLanguage?.addEventListener("change", (e) => {
     saveSetting("selectedLanguage", e.target.value);
@@ -76,7 +85,7 @@ function setupSidebarNavigation() {
 async function loadSettings() {
   if (typeof chrome !== "undefined" && chrome.storage?.session) {
     chrome.storage.session.get(
-      ["micPermission", "selectedLanguage", "selectedVoice", "fields"],
+      ["micPermission", "selectedLanguage", "selectedVoice", "fields", "detectedFormLanguage"],
       (res) => {
         if (res.selectedLanguage && selectLanguage) {
           selectLanguage.value = res.selectedLanguage;
@@ -85,22 +94,12 @@ async function loadSettings() {
           selectVoice.value = res.selectedVoice;
         }
 
-        // Detect language from any stored fields
-        if (res.fields) {
-          const fields = Object.values(res.fields);
-          let devanagariCount = 0;
-          fields.forEach((f) => {
-            const text = `${f.label || ""} ${f.value || ""}`;
-            for (let i = 0; i < text.length; i++) {
-              const code = text.charCodeAt(i);
-              if (code >= 0x0900 && code <= 0x097f) devanagariCount++;
-            }
-          });
-          if (detectedLangPill) {
-            detectedLangPill.textContent = devanagariCount > 0 
-              ? "Hindi (हिंदी - hi-IN)" 
-              : "English (India - en-IN)";
-          }
+        // Show detected form language consistently with popup STT/autofill detection
+        if (detectedLangPill) {
+          const detectedCode =
+            res.detectedFormLanguage ||
+            (res.fields ? detectFormLanguage(Object.values(res.fields)) : "en-IN");
+          detectedLangPill.textContent = getLanguageDisplayLabel(detectedCode);
         }
       }
     );
@@ -179,6 +178,47 @@ async function requestMicrophoneAccess() {
   }
 }
 
+async function refreshProxyStatus() {
+  try {
+    const [healthResp, budgetResp] = await Promise.all([
+      fetch(`${PROXY_URL}/health`, { signal: AbortSignal.timeout(3000) }),
+      fetch(`${PROXY_URL}/budget`, { signal: AbortSignal.timeout(3000) }).catch(() => null),
+    ]);
+
+    if (healthResp.ok) {
+      const health = await healthResp.json();
+      const budget = budgetResp?.ok ? await budgetResp.json() : null;
+      const modeLabel = health.mode || (health.has_key ? "live" : "fixture");
+      if (sidebarProxyDot) sidebarProxyDot.style.backgroundColor = "#2FBF9B";
+      if (sidebarProxyStatus) sidebarProxyStatus.textContent = `Gnani Speech Proxy: ${modeLabel}`;
+      if (aboutProxyStatus) {
+        aboutProxyStatus.textContent = `Online (${modeLabel})`;
+        aboutProxyStatus.className = "status-pill status-mint";
+      }
+      if (aboutProxyDesc && budget) {
+        aboutProxyDesc.textContent = `FastAPI proxy at ${PROXY_URL} • Budget used: ${budget.used ?? 0}/${budget.cap ?? "—"} (Remaining: ${budget.remaining ?? "—"})`;
+      }
+    } else {
+      throw new Error(`HTTP ${healthResp.status}`);
+    }
+  } catch (err) {
+    if (sidebarProxyDot) sidebarProxyDot.style.backgroundColor = "#FF7E6B";
+    if (sidebarProxyStatus) sidebarProxyStatus.textContent = "Gnani Speech Proxy: Offline";
+    if (aboutProxyStatus) {
+      aboutProxyStatus.textContent = "Offline";
+      aboutProxyStatus.className = "status-pill status-coral";
+    }
+  }
+}
+
+function toggleLiveMicTest() {
+  if (isMicTesting) {
+    stopLiveMicTest();
+  } else {
+    runLiveMicTest();
+  }
+}
+
 async function runLiveMicTest() {
   hideFeedback(micFeedbackMsg);
   stopLiveMicTest();
@@ -189,22 +229,28 @@ async function runLiveMicTest() {
     });
 
     audioTestContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioTestContext.state === "suspended") {
+      await audioTestContext.resume();
+    }
     const source = audioTestContext.createMediaStreamSource(audioTestStream);
     const analyser = audioTestContext.createAnalyser();
     analyser.fftSize = 256;
     source.connect(analyser);
 
     micMeterContainer?.classList.remove("hidden");
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const dataArray = new Uint8Array(analyser.fftSize);
+    isMicTesting = true;
 
     function updateMeter() {
-      analyser.getByteFrequencyData(dataArray);
-      let sum = 0;
+      if (!isMicTesting) return;
+      analyser.getByteTimeDomainData(dataArray);
+      let sumSq = 0;
       for (let i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i];
+        const centered = (dataArray[i] - 128) / 128;
+        sumSq += centered * centered;
       }
-      const avg = sum / dataArray.length;
-      const pct = Math.min(100, Math.round((avg / 128) * 100));
+      const rms = Math.sqrt(sumSq / dataArray.length);
+      const pct = Math.min(100, Math.round(rms * 350));
 
       if (micMeterBar) micMeterBar.style.width = `${pct}%`;
       if (meterLevelVal) meterLevelVal.textContent = `${pct}%`;
@@ -215,17 +261,18 @@ async function runLiveMicTest() {
 
     if (btnTestMic) {
       btnTestMic.textContent = "Stop Test (रोकें)";
-      btnTestMic.onclick = stopLiveMicTest;
     }
 
     showFeedback(micFeedbackMsg, "Speak into your microphone now to test live audio input.", "info");
   } catch (err) {
+    isMicTesting = false;
     console.error("Mic test error:", err);
     showFeedback(micFeedbackMsg, "Could not access microphone for live test: " + err.message, "error");
   }
 }
 
 function stopLiveMicTest() {
+  isMicTesting = false;
   if (audioTestAnimId) {
     cancelAnimationFrame(audioTestAnimId);
     audioTestAnimId = null;
@@ -242,7 +289,6 @@ function stopLiveMicTest() {
   if (meterLevelVal) meterLevelVal.textContent = "0%";
   if (btnTestMic) {
     btnTestMic.textContent = "Test Microphone";
-    btnTestMic.onclick = runLiveMicTest;
   }
 }
 

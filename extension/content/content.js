@@ -11,6 +11,11 @@
     window.__jaanchContentInitialized = true;
   }
 
+  let lastBroadcastSignature = "";
+  let lastPageUrl = typeof location !== "undefined" ? location.href : "";
+  let activeSubmitObserver = null;
+  let activeBodyObserver = null;
+
   function clearJaanchOverlays() {
     if (typeof document === "undefined") return;
     document.querySelectorAll("#jaanch-dropdown-root, #jaanch-floating-modal-root")
@@ -55,6 +60,9 @@
     // HTML5 native types
     if (type === "date") return "date";
     if (type === "number") return "digits";
+    if (type === "email" || combined.includes("email") || combined.includes("e-mail") || combined.includes("ईमेल")) {
+      return "email";
+    }
 
     // Date keywords (English & Hindi)
     if (
@@ -247,20 +255,72 @@
       .trim();
   }
 
+  function getFormPageLang() {
+    if (typeof document === "undefined") return "";
+    const formWithLang = document.querySelector?.("form[lang]");
+    const formLang = formWithLang?.getAttribute?.("lang") || "";
+    const docLang = document.documentElement?.getAttribute?.("lang") || document.documentElement?.lang || "";
+    return String(formLang || docLang || "").trim();
+  }
+
   /**
    * Discovers all fillable citizen fields on the live page.
    */
-  function discoverFields() {
-    const rawInputs = Array.from(document.querySelectorAll("input, select, textarea, [role='textbox']"));
+  function discoverFields(options = {}) {
+    const rawInputs = Array.from(
+      document.querySelectorAll("input, select, textarea, [role='textbox'], [contenteditable='true']")
+    );
     const eligibleInputs = rawInputs.filter((input) => {
       if (input.closest && (input.closest("#jaanch-dropdown-root") || input.closest("#jaanch-recheck-root"))) {
         return false;
       }
-      return !isIgnoredField(input);
+      if (isIgnoredField(input)) return false;
+      // Only check CSS/layout visibility in real browsers (preserves lightweight Node mock DOM tests)
+      if (typeof window !== "undefined" && typeof window.getComputedStyle === "function" && typeof input.offsetParent !== "undefined") {
+        if (!isElementVisible(input)) return false;
+      }
+      return true;
     });
     const fields = {};
+    const seenRadioGroups = new Set();
 
     eligibleInputs.forEach((input, index) => {
+      const inputType = (input.type || "").toLowerCase();
+
+      // Deduplicate radio groups into a single logical field keyed by group name
+      if (inputType === "radio") {
+        const groupName = input.name || input.id || `jaanch-radio-${index}`;
+        input.removeEventListener("change", onInputChange);
+        input.addEventListener("change", onInputChange);
+
+        if (seenRadioGroups.has(groupName)) return;
+        seenRadioGroups.add(groupName);
+
+        let selectedVal = "";
+        if (input.name && typeof document !== "undefined" && document.querySelectorAll) {
+          const groupEls = Array.from(document.querySelectorAll(`input[type="radio"][name="${input.name}"]`));
+          const checkedEl = groupEls.find((r) => r.checked);
+          selectedVal = checkedEl ? (checkedEl.value || "") : "";
+        } else if (input.checked) {
+          selectedVal = input.value || "";
+        }
+
+        const labelText = extractLabel(input, index);
+        const isRequired =
+          input.required ||
+          input.getAttribute?.("aria-required") === "true" ||
+          (input.closest?.('[role="listitem"], .question-card, tr, .form-group')?.innerText || "").includes("*");
+
+        fields[groupName] = globalThis.JaanchFieldModel.create({
+          id: groupName,
+          label: labelText,
+          required: isRequired,
+          kind: inferKind(groupName, labelText, input),
+          value: selectedVal,
+        });
+        return;
+      }
+
       const existingId = input.getAttribute("data-jaanch-id");
       const id = input.id || input.name || existingId || `jaanch-field-${index}`;
       if (!input.id && !input.name && !existingId) {
@@ -274,9 +334,14 @@
         (input.closest('[role="listitem"], .question-card, tr, .form-group')?.innerText || "").includes("*");
 
       const kind = inferKind(id, labelText, input);
-      const val = input.value !== undefined && input.value !== null && input.value !== ""
-        ? input.value
-        : (input.innerText || input.textContent || input.getAttribute("data-initial-value") || "");
+      let val = "";
+      if (inputType === "checkbox") {
+        val = input.checked ? (input.value && input.value !== "on" ? input.value : "Yes") : "";
+      } else {
+        val = input.value !== undefined && input.value !== null && input.value !== ""
+          ? input.value
+          : (input.innerText || input.textContent || input.getAttribute("data-initial-value") || "");
+      }
 
       fields[id] = globalThis.JaanchFieldModel.create({
         id,
@@ -296,27 +361,40 @@
       input.addEventListener("input", onInputChange);
     });
 
-    // Keep the direct frame bridge for the embedded dropdown UI.
-    if (typeof document !== "undefined") {
-      const dropdownIframe = document.querySelector("#jaanch-dropdown-card iframe");
-      if (dropdownIframe?.contentWindow) {
-        try {
-          dropdownIframe.contentWindow.postMessage({
-            type: "JAANCH_FIELDS_RESPONSE",
-            fields
-          }, "*");
-        } catch (err) {}
-      }
-    }
+    const pageUrl = typeof location !== "undefined" ? location.href : "";
+    const signature = `${pageUrl}::${Object.values(fields).map((f) => `${f.id}=${f.formValue ?? f.value}`).join("|")}`;
+    const shouldBroadcast = !options.automatic || signature !== lastBroadcastSignature || Boolean(options.reset);
+    lastBroadcastSignature = signature;
 
-    // The service worker is the single persistence path for extension state.
-    if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
-      chrome.runtime
-        .sendMessage({
-          type: "FIELDS_DISCOVERED",
-          fields: Object.values(fields),
-        })
-        .catch(() => {});
+    const pageLang = getFormPageLang();
+    if (shouldBroadcast) {
+      // Keep the direct frame bridge for the embedded dropdown UI.
+      if (typeof document !== "undefined") {
+        const dropdownIframe = document.querySelector("#jaanch-dropdown-card iframe");
+        if (dropdownIframe?.contentWindow) {
+          try {
+            dropdownIframe.contentWindow.postMessage({
+              type: "JAANCH_FIELDS_RESPONSE",
+              fields,
+              pageLang,
+              reset: Boolean(options.reset),
+            }, "*");
+          } catch (err) {}
+        }
+      }
+
+      // The service worker is the single persistence path for extension state.
+      if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+        chrome.runtime
+          .sendMessage({
+            type: "FIELDS_DISCOVERED",
+            fields: Object.values(fields),
+            url: pageUrl,
+            pageLang,
+            reset: Boolean(options.reset),
+          })
+          .catch(() => {});
+      }
     }
 
     return fields;
@@ -328,11 +406,22 @@
     if (target.closest && (target.closest("#jaanch-dropdown-root") || target.closest("#jaanch-recheck-root"))) {
       return;
     }
-    const id = target.id || target.name || target.getAttribute("data-jaanch-id");
+    const targetType = (target.type || "").toLowerCase();
+    const id = targetType === "radio"
+      ? (target.name || target.id || target.getAttribute("data-jaanch-id"))
+      : (target.id || target.name || target.getAttribute("data-jaanch-id"));
     if (!id) return;
-    const value = target.value !== undefined && target.value !== null
-      ? target.value
-      : (target.innerText || target.textContent || "");
+
+    let value = "";
+    if (targetType === "checkbox") {
+      value = target.checked ? (target.value && target.value !== "on" ? target.value : "Yes") : "";
+    } else if (targetType === "radio") {
+      value = target.checked ? (target.value || "") : "";
+    } else {
+      value = target.value !== undefined && target.value !== null
+        ? target.value
+        : (target.innerText || target.textContent || "");
+    }
 
     // 1. Direct postMessage to in-page dropdown iframe (if open)
     if (typeof document !== "undefined") {
@@ -479,7 +568,8 @@
       try {
         iframe.contentWindow?.postMessage({
           type: "JAANCH_INIT_FIELDS",
-          fields: liveFields
+          fields: liveFields,
+          pageLang: getFormPageLang(),
         }, "*");
       } catch (err) {}
     });
@@ -502,13 +592,100 @@
    * Safely updates DOM input elements with approved values and triggers a green highlight pulse.
    * Core Invariant: NEVER submits the form.
    */
+  function toIsoDateValue(str) {
+    if (!str) return "";
+    const trimmed = String(str).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+    const dmy = trimmed.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+    if (dmy) {
+      return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+    }
+    return trimmed;
+  }
+
+  function setElementValueSafe(el, nextValue) {
+    const tag = (el.tagName || "").toUpperCase();
+    const type = (el.type || "").toLowerCase();
+
+    if (tag === "SELECT") {
+      const opts = Array.from(el.options || []);
+      const targetUpper = String(nextValue).trim().toUpperCase();
+      const matchOpt =
+        opts.find(
+          (o) =>
+            String(o.value).trim().toUpperCase() === targetUpper ||
+            String(o.text || o.textContent || "").trim().toUpperCase() === targetUpper
+        ) ||
+        opts.find((o) =>
+          String(o.text || o.textContent || "")
+            .split("/")
+            .some((part) => part.trim().toUpperCase() === targetUpper)
+        );
+      el.value = matchOpt ? matchOpt.value : nextValue;
+    } else if (type === "date") {
+      el.value = toIsoDateValue(nextValue);
+    } else if (type === "checkbox") {
+      const norm = String(nextValue).trim().toLowerCase();
+      el.checked =
+        norm === "true" ||
+        norm === "yes" ||
+        norm === "haan" ||
+        norm === "ok" ||
+        norm === "हाँ" ||
+        norm === "सही" ||
+        norm === "1" ||
+        norm === "checked";
+    } else if (type === "radio") {
+      const radios = el.name && typeof document !== "undefined" && document.querySelectorAll
+        ? Array.from(document.querySelectorAll(`input[type="radio"][name="${el.name}"]`))
+        : [el];
+      const targetUpper = String(nextValue).trim().toUpperCase();
+      radios.forEach((r) => {
+        if (String(r.value || "").trim().toUpperCase() === targetUpper || r.id === nextValue) {
+          r.checked = true;
+          try {
+            if (typeof Event !== "undefined") r.dispatchEvent(new Event("change", { bubbles: true }));
+          } catch (e) {}
+        }
+      });
+      return;
+    } else if (
+      typeof el.getAttribute === "function" &&
+      (el.getAttribute("contenteditable") === "true" || el.getAttribute("role") === "textbox") &&
+      tag !== "INPUT" &&
+      tag !== "TEXTAREA"
+    ) {
+      el.textContent = nextValue;
+    } else {
+      let usedNativeSetter = false;
+      if (typeof window !== "undefined" && (tag === "INPUT" || tag === "TEXTAREA")) {
+        const proto = tag === "TEXTAREA" ? window.HTMLTextAreaElement?.prototype : window.HTMLInputElement?.prototype;
+        const descriptor = proto && Object.getOwnPropertyDescriptor(proto, "value");
+        if (descriptor?.set) {
+          descriptor.set.call(el, nextValue);
+          usedNativeSetter = true;
+        }
+      }
+      if (!usedNativeSetter) {
+        el.value = nextValue;
+      }
+    }
+
+    try {
+      if (typeof Event !== "undefined") {
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    } catch (e) {}
+  }
+
   function applyFieldUpdates(fieldsArray) {
     if (!Array.isArray(fieldsArray)) return 0;
     let updatedCount = 0;
 
     fieldsArray.forEach((field) => {
-      if (!field || !field.id || field.value === undefined) return;
-      
+      if (!field || !field.id || field.value === undefined || field.value === null) return;
+
       let el = document.getElementById(field.id);
       if (!el && typeof CSS !== "undefined" && CSS.escape) {
         try {
@@ -522,13 +699,7 @@
       }
 
       if (el) {
-        el.value = field.value;
-        try {
-          if (typeof Event !== "undefined") {
-            el.dispatchEvent(new Event("input", { bubbles: true }));
-            el.dispatchEvent(new Event("change", { bubbles: true }));
-          }
-        } catch (e) {}
+        setElementValueSafe(el, field.value);
         updatedCount++;
 
         if (el.style) {
@@ -643,9 +814,9 @@
     if (document.getElementById("jaanch-recheck-root")) return;
 
     // Only inject if there are fillable fields on the page
-    const inputs = Array.from(document.querySelectorAll("input, select, textarea")).filter(
-      (i) => !isIgnoredField(i)
-    );
+    const inputs = Array.from(
+      document.querySelectorAll("input, select, textarea, [role='textbox'], [contenteditable='true']")
+    ).filter((i) => !isIgnoredField(i));
     if (inputs.length === 0) return;
 
     const submitTarget = findSubmitButton();
@@ -823,15 +994,18 @@
 
     if (typeof MutationObserver !== "undefined") {
       try {
-        const submitObserver = new MutationObserver(() => syncStickerState());
-        submitObserver.observe(submitTarget, {
+        if (activeSubmitObserver) activeSubmitObserver.disconnect();
+        if (activeBodyObserver) activeBodyObserver.disconnect();
+
+        activeSubmitObserver = new MutationObserver(() => syncStickerState());
+        activeSubmitObserver.observe(submitTarget, {
           attributes: true,
           attributeFilter: ["disabled", "aria-disabled", "class", "style"]
         });
 
         if (typeof document !== "undefined" && document.body) {
-          const bodyObserver = new MutationObserver(() => syncStickerState());
-          bodyObserver.observe(document.body, {
+          activeBodyObserver = new MutationObserver(() => syncStickerState());
+          activeBodyObserver.observe(document.body, {
             childList: true,
             subtree: true,
             attributeFilter: ["open", "class", "aria-hidden"]
@@ -979,7 +1153,18 @@
     }
   }
 
-  // Lifecycle initialization
+  function handleRouteChange() {
+    lastBroadcastSignature = "";
+    clearJaanchOverlays();
+    const oldSticker = document.getElementById("jaanch-recheck-root");
+    if (oldSticker) oldSticker.remove();
+    setTimeout(() => {
+      discoverFields({ reset: true });
+      injectRecheckButton();
+      attachSubmitWipers();
+    }, 350);
+  }
+
   // Lifecycle initialization
   function init() {
       clearJaanchOverlays();
@@ -987,26 +1172,37 @@
       injectRecheckButton();
       attachSubmitWipers();
 
+      // SPA route change listeners (works without extra webNavigation permission)
+      if (typeof window !== "undefined") {
+        window.addEventListener("popstate", () => {
+          const currentHref = typeof location !== "undefined" ? location.href : "";
+          if (currentHref !== lastPageUrl) {
+            lastPageUrl = currentHref;
+            handleRouteChange();
+          }
+        });
+        window.addEventListener("hashchange", () => {
+          const currentHref = typeof location !== "undefined" ? location.href : "";
+          if (currentHref !== lastPageUrl) {
+            lastPageUrl = currentHref;
+            handleRouteChange();
+          }
+        });
+      }
+
       // Runtime message listener for field extraction, DOM apply, and modal toggle
       if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
           chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            
-              // --- NEW SPA ROUTING FIX ---
               if (message.action === "route_changed") {
                   console.log("[Jaanch] Route change detected. Re-scanning...");
-                  setTimeout(() => {
-                      discoverFields();
-                      injectRecheckButton();
-                      attachSubmitWipers();
-                  }, 800);
+                  handleRouteChange();
                   sendResponse({ ok: true });
                   return false;
               }
-              // ---------------------------
 
               if (message.type === "GET_DISCOVERED_FIELDS") {
                   const found = discoverFields();
-                  sendResponse({ fields: found || {} });
+                  sendResponse({ fields: found || {}, pageLang: getFormPageLang() });
                   return false;
               }
               if (message.type === "APPLY_FIELD_UPDATES") {
@@ -1042,7 +1238,13 @@
       const observer = new MutationObserver(() => {
         clearTimeout(debounceTimeout);
         debounceTimeout = setTimeout(() => {
-          discoverFields();
+          const currentHref = typeof location !== "undefined" ? location.href : "";
+          if (currentHref && lastPageUrl && currentHref !== lastPageUrl) {
+            lastPageUrl = currentHref;
+            handleRouteChange();
+            return;
+          }
+          discoverFields({ automatic: true });
           injectRecheckButton();
           attachSubmitWipers();
         }, 300);
@@ -1054,14 +1256,33 @@
   // Cross-frame / test postMessage listener
   if (typeof window !== "undefined") {
     window.addEventListener("message", (event) => {
+      let extensionOrigin = "";
+      try {
+        if (typeof chrome !== "undefined" && chrome.runtime?.getURL) {
+          extensionOrigin = new URL(chrome.runtime.getURL("")).origin;
+        }
+      } catch (e) {}
+
+      if (
+        extensionOrigin &&
+        event.origin &&
+        event.origin !== "null" &&
+        event.origin !== extensionOrigin &&
+        event.data?.type !== "JAANCH_MOCK_FORM_SUBMITTED"
+      ) {
+        return;
+      }
+
       if (event.data?.type === "JAANCH_POPUP_GET_FIELDS" || event.data?.type === "JAANCH_POPUP_MOUNTED") {
         const live = discoverFields();
+        const pageLang = getFormPageLang();
         console.log(`[Jaanch DOM Debug] Received ${event.data.type}. Replying with ${Object.keys(live).length} fields.`);
         if (event.source && typeof event.source.postMessage === "function") {
           try {
             event.source.postMessage({
               type: "JAANCH_FIELDS_RESPONSE",
-              fields: live
+              fields: live,
+              pageLang,
             }, "*");
           } catch (err) {}
         }
@@ -1070,7 +1291,19 @@
           try {
             iframe.contentWindow.postMessage({
               type: "JAANCH_FIELDS_RESPONSE",
-              fields: live
+              fields: live,
+              pageLang,
+            }, "*");
+          } catch (err) {}
+        }
+      } else if (event.data?.type === "JAANCH_APPLY_FIELD_UPDATES") {
+        const count = applyFieldUpdates(event.data.fields);
+        if (event.source && typeof event.source.postMessage === "function") {
+          try {
+            event.source.postMessage({
+              type: "JAANCH_APPLY_RESPONSE",
+              ok: true,
+              count,
             }, "*");
           } catch (err) {}
         }

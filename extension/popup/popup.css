@@ -607,8 +607,25 @@ body.jaanch-body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 8px 0;
+  gap: 8px;
+  padding: 4px 0;
+  min-height: 0;
+}
+
+.field-meta-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-kind-pill {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background-color: rgba(31, 59, 58, 0.08);
+  color: var(--dark-green);
 }
 
 .value-large-open {
@@ -616,9 +633,115 @@ body.jaanch-body {
   font-weight: 800;
   color: var(--dark-green);
   letter-spacing: 1.5px;
-  line-height: 1.1;
+  line-height: 1.08;
   text-align: center;
   user-select: text;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.session-edit-bar {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.session-form-ref {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8f4700;
+  background-color: rgba(245, 166, 35, 0.14);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+  border-radius: 6px;
+  padding: 3px 8px;
+  text-align: center;
+}
+
+.session-edit-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #FFFFFF;
+  border: 1.5px solid rgba(31, 59, 58, 0.22);
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+.session-edit-input-wrap:focus-within {
+  border-color: var(--teal-accent);
+  box-shadow: 0 0 0 2px rgba(47, 191, 155, 0.16);
+}
+
+.session-edit-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.session-edit-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark-green);
+  min-width: 0;
+}
+
+.live-feedback-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.vad-indicator {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.vad-indicator.idle {
+  background-color: rgba(31, 59, 58, 0.06);
+  color: var(--dark-green);
+}
+
+.vad-indicator.speaking {
+  background-color: rgba(255, 126, 107, 0.16);
+  color: #b73826;
+}
+
+.heard-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--dark-green);
+  background-color: rgba(47, 191, 155, 0.1);
+  border: 1px solid rgba(47, 191, 155, 0.25);
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+.heard-transcript {
+  font-style: italic;
+  color: rgba(31, 59, 58, 0.85);
+}
+
+.heard-action {
+  color: var(--dark-green);
 }
 
 .spelled-chips-open {
@@ -737,6 +860,20 @@ body.jaanch-body {
   border-color: var(--mint);
   background-color: rgba(47, 191, 155, 0.12);
   color: var(--mint);
+}
+
+.btn-pill-voice.muted {
+  border-style: dashed;
+  border-color: rgba(11, 61, 46, 0.35);
+  background-color: rgba(11, 61, 46, 0.05);
+  color: rgba(11, 61, 46, 0.65);
+}
+
+.btn-pill-voice.muted:hover {
+  border-style: solid;
+  border-color: var(--dark-green);
+  background-color: var(--dark-green);
+  color: var(--cream);
 }
 
 .voice-btn-inner {
@@ -907,9 +1044,9 @@ body.jaanch-body {
 .row-value-col {
   flex: 1;
   padding: 0 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .row-value {
@@ -917,6 +1054,23 @@ body.jaanch-body {
   font-weight: 800;
   color: var(--text-dark);
   letter-spacing: 0.3px;
+}
+
+.summary-edit-input {
+  width: 100%;
+  border: 1px solid rgba(31, 59, 58, 0.16);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--dark-green);
+  background-color: rgba(255, 255, 255, 0.85);
+  outline: none;
+}
+
+.summary-edit-input:focus {
+  border-color: var(--teal-accent);
+  background-color: #FFFFFF;
 }
 
 .row-status-col {
@@ -942,6 +1096,12 @@ body.jaanch-body {
   background-color: rgba(47, 191, 155, 0.18);
   color: #14614e;
   border: 1px solid rgba(47, 191, 155, 0.35);
+}
+
+.chip.filled {
+  background-color: rgba(47, 191, 155, 0.22);
+  color: #0e5a49;
+  border: 1px solid rgba(47, 191, 155, 0.45);
 }
 
 .chip.mismatch {

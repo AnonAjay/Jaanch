@@ -82,8 +82,8 @@
       <!-- Sidebar Footer Status -->
       <div class="sidebar-footer">
         <div class="status-indicator-row">
-          <span class="status-dot-live"></span>
-          <span class="status-text">Gnani Speech Proxy: Live</span>
+          <span id="sidebar-proxy-dot" class="status-dot-live"></span>
+          <span id="sidebar-proxy-status" class="status-text">Gnani Speech Proxy: Checking...</span>
         </div>
         <span class="app-version">Jaanch v0.1.0 (MV3)</span>
       </div>
@@ -383,10 +383,10 @@
             <div class="option-row">
               <div class="option-meta">
                 <span class="option-title">Local Speech Proxy Server</span>
-                <span class="option-desc">FastAPI thin proxy running at http://127.0.0.1:8000 with CORS protection and request budget capping.</span>
+                <span id="about-proxy-desc" class="option-desc">FastAPI thin proxy running at http://127.0.0.1:8000 with CORS protection and request budget capping.</span>
               </div>
               <div class="option-action">
-                <span class="status-pill status-mint">HTTP 200 OK</span>
+                <span id="about-proxy-status" class="status-pill status-soft">Checking...</span>
               </div>
             </div>
 
