@@ -120,14 +120,14 @@
       <section id="screen-verification" class="view-screen hidden">
         <div class="verification-open-container">
           
-          <!-- Field Header Row: 1.) Field_Title 🔊          < | > -->
+          <!-- Field Header Row: 🔊 Field_Title          < | > -->
           <div class="field-header-row">
             <div class="field-title-group">
-              <span id="field-number" class="field-num-prefix">1.)</span>
-              <h2 id="field-label" class="field-label-open">Candidate Name</h2>
-              <button id="btn-tts-speak" class="btn-icon-bubble" title="Pronunciation TTS (उच्चारण सुनें)">
+              <span id="field-number" style="display: none;" aria-hidden="true"></span>
+              <button id="btn-tts-speak" class="btn-icon-bubble" title="Field title TTS (फ़ील्ड नाम सुनें)">
                 🔊
               </button>
+              <h2 id="field-label" class="field-label-open">Candidate Name</h2>
             </div>
 
             <div class="field-nav-group">
@@ -142,17 +142,35 @@
           <!-- Underline Accent Line under Title -->
           <div class="field-title-underline"></div>
 
-          <!-- Center Open Space: Large Value (>= 40px) + Spelled Tokens + Editable Session DB -->
+          <!-- Center Open Space: Large Editable Value + Corner Speaker Bubble -->
           <div class="field-value-display-open">
-            <div class="field-meta-pills">
+            <div class="field-meta-pills" style="display: none;" aria-hidden="true">
               <span id="field-kind" class="meta-kind-pill">NAME</span>
               <span id="field-status-chip" class="chip not-checked">NOT CHECKED</span>
             </div>
-            <div id="field-value-large" class="value-large-open">SANJAY</div>
-            <div id="spelled-container" class="spelled-chips-open">
-              <!-- Dynamically populated spelled letter/digit bubbles -->
+
+            <div class="field-value-container">
+              <textarea
+                id="field-value-large"
+                class="value-large-open value-large-textarea size-short"
+                rows="1"
+                placeholder="— (Blank / खाली)"
+                autocomplete="off"
+                aria-label="Candidate field value"
+              ></textarea>
+              <button
+                id="btn-tts-speak-value"
+                class="btn-icon-bubble btn-value-speaker-corner"
+                title="Speak value (मान सुनें)"
+                aria-label="Speak field value"
+              >
+                🔊
+              </button>
             </div>
-            <div class="session-edit-bar">
+
+            <!-- Hidden compatibility containers for tests and fallback listeners -->
+            <div id="spelled-container" class="spelled-chips-open" style="display: none;" aria-hidden="true"></div>
+            <div class="session-edit-bar" style="display: none;" aria-hidden="true">
               <div id="session-form-ref" class="session-form-ref hidden"></div>
               <div class="session-edit-input-wrap">
                 <label for="field-edit-input" class="session-edit-label">Session DB Value:</label>
@@ -161,8 +179,8 @@
             </div>
           </div>
 
-          <!-- Live VAD & Extractor Feedback Strip -->
-          <div class="live-feedback-strip">
+          <!-- Live VAD & Extractor Feedback Strip (Hidden for clean minimal UI) -->
+          <div class="live-feedback-strip" style="display: none;" aria-hidden="true">
             <div id="vad-indicator" class="vad-indicator idle">Mic paused (TTS mode) — Tap Paused to speak edits</div>
             <div id="heard-container" class="heard-container hidden">
               <span id="heard-transcript" class="heard-transcript"></span>

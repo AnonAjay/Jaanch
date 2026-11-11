@@ -86,6 +86,7 @@ const fieldEditInput = document.getElementById("field-edit-input");
 const sessionFormRef = document.getElementById("session-form-ref");
 const spelledContainer = document.getElementById("spelled-container");
 const btnTtsSpeak = document.getElementById("btn-tts-speak");
+const btnTtsSpeakValue = document.getElementById("btn-tts-speak-value");
 const btnPrevField = document.getElementById("btn-prev-field");
 const btnNextField = document.getElementById("btn-next-field");
 
@@ -261,9 +262,23 @@ function setupNavigationHandlers() {
     resumeAudioContext();
     if (isAudioPlaying()) {
       stopAudioPlayback();
-      vadIndicator.textContent = "Audio stopped.";
+      if (btnTtsSpeak) btnTtsSpeak.classList.remove("active");
+      if (btnTtsSpeakValue) btnTtsSpeakValue.classList.remove("active");
+      if (vadIndicator) vadIndicator.textContent = "Audio stopped.";
     } else {
-      speakCurrentField();
+      speakCurrentFieldLabel();
+    }
+  });
+
+  btnTtsSpeakValue?.addEventListener("click", () => {
+    resumeAudioContext();
+    if (isAudioPlaying()) {
+      stopAudioPlayback();
+      if (btnTtsSpeak) btnTtsSpeak.classList.remove("active");
+      if (btnTtsSpeakValue) btnTtsSpeakValue.classList.remove("active");
+      if (vadIndicator) vadIndicator.textContent = "Audio stopped.";
+    } else {
+      speakCurrentFieldValue();
     }
   });
 
@@ -321,7 +336,7 @@ function setupNavigationHandlers() {
     }
   });
 
-  // Editable Session DB input on Verification Screen
+  // Editable large input on Verification Screen (and hidden session-edit input sync)
   const handleInlineSessionEdit = (e) => {
     const current = fields[currentFieldIndex];
     if (!current) return;
@@ -332,6 +347,16 @@ function setupNavigationHandlers() {
   };
   fieldEditInput?.addEventListener("input", handleInlineSessionEdit);
   fieldEditInput?.addEventListener("change", handleInlineSessionEdit);
+  fieldValueLarge?.addEventListener("input", (e) => {
+    applyAdaptiveFontSize(fieldValueLarge, e.target.value);
+    handleInlineSessionEdit(e);
+    if (fieldEditInput) fieldEditInput.value = e.target.value;
+  });
+  fieldValueLarge?.addEventListener("change", (e) => {
+    applyAdaptiveFontSize(fieldValueLarge, e.target.value);
+    handleInlineSessionEdit(e);
+    if (fieldEditInput) fieldEditInput.value = e.target.value;
+  });
 
   // Settings handlers (if opened in embedded/mock mode)
   btnBackSettings?.addEventListener("click", () => {
@@ -983,6 +1008,33 @@ async function testMicrophone() {
 // -------------------------------------------------------------------
 // SCREEN 3: VERIFICATION FLOW & RENDERING
 // -------------------------------------------------------------------
+
+/**
+ * Dynamically scales typography according to value length so both short names
+ * and long institutions/addresses render cleanly without clipping.
+ */
+function applyAdaptiveFontSize(el, text) {
+  if (!el) return;
+  const len = (text || "").trim().length;
+  el.classList.remove("size-short", "size-medium", "size-long", "size-xlong");
+  if (len <= 12) {
+    el.classList.add("size-short");
+  } else if (len <= 24) {
+    el.classList.add("size-medium");
+  } else if (len <= 42) {
+    el.classList.add("size-long");
+  } else {
+    el.classList.add("size-xlong");
+  }
+
+  if (el.tagName === "TEXTAREA") {
+    el.style.height = "auto";
+    // Generous buffer to prevent clipping of descenders ('g', 'j', 'y', 'p', 'q')
+    const newHeight = Math.max(el.scrollHeight + 8, 48);
+    el.style.height = `${newHeight}px`;
+  }
+}
+
 function renderCurrentField(options = {}) {
   if (!fields[currentFieldIndex]) return;
   const current = fields[currentFieldIndex];
@@ -993,7 +1045,18 @@ function renderCurrentField(options = {}) {
 
   if (fieldLabel) fieldLabel.textContent = current.label || current.id;
   if (fieldKind) fieldKind.textContent = (current.kind || "text").toUpperCase();
-  if (fieldValueLarge) fieldValueLarge.textContent = displayVal || "— (Blank / खाली)";
+  if (fieldValueLarge && !options.skipInputSync) {
+    if (typeof document === "undefined" || document.activeElement !== fieldValueLarge) {
+      if ("value" in fieldValueLarge) {
+        fieldValueLarge.value = displayVal;
+      } else {
+        fieldValueLarge.textContent = displayVal || "— (Blank / खाली)";
+      }
+    }
+  }
+  if (fieldValueLarge) {
+    applyAdaptiveFontSize(fieldValueLarge, displayVal);
+  }
 
   if (fieldEditInput && !options.skipInputSync) {
     if (typeof document === "undefined" || document.activeElement !== fieldEditInput) {
@@ -1104,6 +1167,8 @@ function navigateField(delta) {
 
 function stopCurrentInteractions(options = {}) {
   stopAudioPlayback();
+  btnTtsSpeak?.classList.remove("active");
+  btnTtsSpeakValue?.classList.remove("active");
   isMicPaused = true;
   if (continuousController) {
     if (options.forceCancel) {
@@ -1215,6 +1280,106 @@ async function ensureContinuousListening(force = false) {
     }
     return false;
   }
+}
+
+/**
+ * Speaks the field name/identifier (top speaker icon next to title)
+ */
+async function speakCurrentFieldLabel() {
+  const current = fields[currentFieldIndex];
+  if (!current) return;
+
+  resumeAudioContext();
+  if (isAudioPlaying()) {
+    stopAudioPlayback();
+    btnTtsSpeak?.classList.remove("active");
+    btnTtsSpeakValue?.classList.remove("active");
+    return;
+  }
+
+  if (!isMicPaused || isVoiceCapturing) {
+    isMicPaused = true;
+    isVoiceCapturing = false;
+    pauseContinuousListening();
+    resetVoiceButtonUI();
+  }
+
+  stopAudioPlayback();
+  btnTtsSpeakValue?.classList.remove("active");
+  btnTtsSpeak?.classList.add("active");
+
+  const cleanLabel = (current.label || current.id).split("/")[0].trim();
+  let phrase = cleanLabel;
+  if (current.kind === "name") {
+    phrase = "अभ्यर्थी का नाम";
+  } else if (current.kind === "date") {
+    phrase = "जन्म तिथि";
+  } else if (current.kind === "digits") {
+    phrase = cleanLabel ? `नंबर: ${cleanLabel}` : "नंबर";
+  } else if (current.kind === "district") {
+    phrase = "जिला";
+  }
+
+  await playTTSPhrase(phrase, {
+    voice: selectedVoice,
+    lang: TTS_LANGUAGE,
+    proxyUrl: PROXY_URL,
+    onStart: () => {
+      btnTtsSpeak?.classList.add("active");
+    },
+    onEnd: () => {
+      btnTtsSpeak?.classList.remove("active");
+    }
+  });
+
+  btnTtsSpeak?.classList.remove("active");
+}
+
+/**
+ * Speaks what is inside the whole editable text (trailing foot speaker icon)
+ */
+async function speakCurrentFieldValue() {
+  const current = fields[currentFieldIndex];
+  if (!current) return;
+
+  resumeAudioContext();
+  if (isAudioPlaying()) {
+    stopAudioPlayback();
+    btnTtsSpeak?.classList.remove("active");
+    btnTtsSpeakValue?.classList.remove("active");
+    return;
+  }
+
+  if (!isMicPaused || isVoiceCapturing) {
+    isMicPaused = true;
+    isVoiceCapturing = false;
+    pauseContinuousListening();
+    resetVoiceButtonUI();
+  }
+
+  stopAudioPlayback();
+  btnTtsSpeak?.classList.remove("active");
+  btnTtsSpeakValue?.classList.add("active");
+
+  const liveVal = (fieldValueLarge && typeof fieldValueLarge.value === "string")
+    ? fieldValueLarge.value.trim()
+    : (current.value || "").trim();
+
+  const phrase = liveVal || "खाली है";
+
+  await playTTSPhrase(phrase, {
+    voice: selectedVoice,
+    lang: TTS_LANGUAGE,
+    proxyUrl: PROXY_URL,
+    onStart: () => {
+      btnTtsSpeakValue?.classList.add("active");
+    },
+    onEnd: () => {
+      btnTtsSpeakValue?.classList.remove("active");
+    }
+  });
+
+  btnTtsSpeakValue?.classList.remove("active");
 }
 
 /**
