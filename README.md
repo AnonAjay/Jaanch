@@ -27,8 +27,8 @@ Citizens often have low digital literacy or struggle to inspect small on-screen 
 |   - Discovers input, select, textarea, role="textbox", & contenteditable     |
 |   - 9-strategy label extraction + kind inference (name, date, digits, email, |
 |     district, text); filters CAPTCHAs, CSRF tokens, hidden & search inputs   |
-|   - Injects Shadow DOM pill beside submit ("जाँच ->" / "Recheck with Jaanch")|
-|   - Hosts 612x415px iframe modal (allow="microphone") across SPA routes       |
+|   - Injects Shadow DOM pill beside submit ("जाँच ->" / "Recheck with Jaanch") |
+|   - Hosts 612x415px iframe modal (allow="microphone") across SPA routes      |
 |     using popstate / hashchange / MutationObserver (no webNavigation needed) |
 +---------------------------------------+--------------------------------------+
                                         |
@@ -36,11 +36,11 @@ Citizens often have low digital literacy or struggle to inspect small on-screen 
                                         v
 +------------------------------------------------------------------------------+
 | 2. 3-View Verification UI & Editable Session DB (popup/ & settings/)         |
-|   - Homepage: Concentric 3-layer Indic orbital rings around central जाँच orb |
+|   - Homepage: Concentric 3-layer Indic orbital rings around central जाँच orb  |
 |   - Active Field View:                                                       |
-|     * Title TTS [🔊] & Value TTS [🔊] via on-device Web Speech API (hi-IN)   |
+|     * Title TTS [🔊] & Value TTS [🔊] via on-device Web Speech API (hi-IN)  |
 |     * Auto-resizing editable value textarea (42px->17px adaptive scaling)    |
-|     * Bottom controls: Confirm (✔), Reject (✖), Paused/Auto mic toggle       |
+|     * Bottom controls: Confirm (✔), Reject (✖), Paused/Auto mic toggle      |
 |   - Summary View: Borderless inline-editable textarea rows + status chips    |
 |     * Actions: [Apply to Form], [Recheck All], [Ask Unverified]              |
 |   - Full-Page Settings: Live RMS mic meter, auto-detected form language,     |
@@ -57,7 +57,7 @@ Citizens often have low digital literacy or struggle to inspect small on-screen 
                     |       |   - SW relays PROXY_HEALTH & PROXY_STT to        |
                     |       |     127.0.0.1:8000 (bypasses iframe PNA/CORS)    |
                     |       |   - Validates WAV <= 25s before charging credits |
-                    |       |   - AutoGnaniAdapter (GNANI_MODE=auto): checks    |
+                    |       |   - AutoGnaniAdapter (GNANI_MODE=auto): checks   |
                     |       |     local fixtures -> live Gnani Prisma v2.5 STT |
                     |       |   - Uses form-detected language (en/hi/bn/mr/ta/te)|
                     |       |   - Enforces 4500.0 credit & 40/session caps     |
@@ -283,5 +283,3 @@ node eval/run_eval.js
 - **Challenge**: The Great Indian AI Internship Challenge (gnani.ai)
 - **Hashtags**: `#GreatIndianAIInternshipChallenge` `#GnaniAI`
 - **Models**: Gnani Prisma STT (`prisma-v2.5`), Gnani Timbre TTS (`timbre-v2.5`) + On-Device Web Speech API
-- **Video Walkthrough**: 60-second shot list in [`video/SHOT_LIST.md`](video/SHOT_LIST.md)
-- **Social Posts**: Post drafts in [`docs/SUBMISSION.md`](docs/SUBMISSION.md)
