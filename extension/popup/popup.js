@@ -1016,21 +1016,23 @@ async function testMicrophone() {
 function applyAdaptiveFontSize(el, text) {
   if (!el) return;
   const len = (text || "").trim().length;
-  el.classList.remove("size-short", "size-medium", "size-long", "size-xlong");
-  if (len <= 12) {
+  el.classList.remove("size-short", "size-medium", "size-long", "size-xlong", "size-xxlong");
+  if (len <= 14) {
     el.classList.add("size-short");
-  } else if (len <= 24) {
+  } else if (len <= 35) {
     el.classList.add("size-medium");
-  } else if (len <= 42) {
+  } else if (len <= 70) {
     el.classList.add("size-long");
-  } else {
+  } else if (len <= 120) {
     el.classList.add("size-xlong");
+  } else {
+    el.classList.add("size-xxlong");
   }
 
   if (el.tagName === "TEXTAREA") {
     el.style.height = "auto";
-    // Generous buffer to prevent clipping of descenders ('g', 'j', 'y', 'p', 'q')
-    const newHeight = Math.max(el.scrollHeight + 8, 48);
+    const scrollH = el.scrollHeight;
+    const newHeight = Math.min(Math.max(scrollH + 6, 44), 160);
     el.style.height = `${newHeight}px`;
   }
 }
@@ -1867,12 +1869,18 @@ function renderSummaryTable() {
 
     const rowValueCol = document.createElement("div");
     rowValueCol.className = "row-value-col";
-    const editInput = document.createElement("input");
-    editInput.type = "text";
+    const editInput = document.createElement("textarea");
+    editInput.rows = 1;
     editInput.className = "summary-edit-input";
     editInput.value = field.value || "";
-    editInput.placeholder = "Blank (type or speak)";
+    editInput.placeholder = "— (Blank / खाली)";
     editInput.setAttribute("data-field-id", field.id);
+
+    const autoResizeSummaryTextarea = (el) => {
+      if (!el) return;
+      el.style.height = "auto";
+      el.style.height = `${Math.max(el.scrollHeight, 26)}px`;
+    };
 
     const statusBadgeCol = document.createElement("div");
     statusBadgeCol.className = "row-status-col";
@@ -1884,6 +1892,7 @@ function renderSummaryTable() {
     editInput.addEventListener("click", (e) => e.stopPropagation());
     const onSummaryEdit = (e) => {
       e.stopPropagation();
+      autoResizeSummaryTextarea(editInput);
       applyOperatorSessionEdit(field, e.target.value);
       saveFieldsToSession();
       const sClass = field.status || "not-checked";
@@ -1907,6 +1916,7 @@ function renderSummaryTable() {
       renderCurrentField();
     });
     summaryTableBody.appendChild(row);
+    autoResizeSummaryTextarea(editInput);
 
     // 2. Legacy summary list
     if (summaryList) {
