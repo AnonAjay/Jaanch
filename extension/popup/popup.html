@@ -142,11 +142,31 @@
           <!-- Underline Accent Line under Title -->
           <div class="field-title-underline"></div>
 
-          <!-- Center Open Space: Large Value (>= 40px) + Spelled Tokens -->
+          <!-- Center Open Space: Large Value (>= 40px) + Spelled Tokens + Editable Session DB -->
           <div class="field-value-display-open">
+            <div class="field-meta-pills">
+              <span id="field-kind" class="meta-kind-pill">NAME</span>
+              <span id="field-status-chip" class="chip not-checked">NOT CHECKED</span>
+            </div>
             <div id="field-value-large" class="value-large-open">SANJAY</div>
             <div id="spelled-container" class="spelled-chips-open">
               <!-- Dynamically populated spelled letter/digit bubbles -->
+            </div>
+            <div class="session-edit-bar">
+              <div id="session-form-ref" class="session-form-ref hidden"></div>
+              <div class="session-edit-input-wrap">
+                <label for="field-edit-input" class="session-edit-label">Session DB Value:</label>
+                <input id="field-edit-input" type="text" class="session-edit-input" placeholder="Speak or type to edit/fill..." autocomplete="off" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Live VAD & Extractor Feedback Strip -->
+          <div class="live-feedback-strip">
+            <div id="vad-indicator" class="vad-indicator idle">Mic paused (TTS mode) — Tap Paused to speak edits</div>
+            <div id="heard-container" class="heard-container hidden">
+              <span id="heard-transcript" class="heard-transcript"></span>
+              <span id="heard-action" class="heard-action"></span>
             </div>
           </div>
 
@@ -172,8 +192,8 @@
                 </svg>
               </button>
 
-              <!-- Compact Continuous Voice Mic Pill (Mini waveform inside button) -->
-              <button id="btn-voice-toggle" class="btn-pill-voice" title="Speak to Verify (Continuous Mic)">
+              <!-- Compact Continuous Voice Mic Pill (Paused by default during TTS verification) -->
+              <button id="btn-voice-toggle" class="btn-pill-voice muted" title="Microphone paused during TTS verification — Click to turn Mic ON for voice edits">
                 <div class="voice-btn-inner" id="voice-btn-inner">
                   <!-- Play Icon (when idle) -->
                   <svg id="voice-icon-play" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -193,21 +213,14 @@
                     <span class="wave-bar bar-4"></span>
                   </div>
                 </div>
-                <span id="voice-btn-sub" class="voice-btn-text">Mic</span>
+                <span id="voice-btn-sub" class="voice-btn-text">Paused</span>
               </button>
             </div>
           </div>
 
           <!-- Hidden compatibility elements for background listeners / test assertions -->
           <div style="display: none;" aria-hidden="true">
-            <span id="field-kind">NAME</span>
-            <span id="field-status-chip">Not Checked</span>
             <canvas id="waveform-canvas" width="1" height="1"></canvas>
-            <div id="vad-indicator">Ready</div>
-            <div id="heard-container">
-              <span id="heard-transcript"></span>
-              <span id="heard-action"></span>
-            </div>
             <button id="btn-accept"></button>
             <button id="btn-keep"></button>
             <button id="btn-ask-again"></button>

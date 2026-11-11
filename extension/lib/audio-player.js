@@ -77,11 +77,12 @@ export async function playTTSPhrase(text, options = {}) {
   isPlaying = true;
 
   const voice = options.voice || "Shivani";
+  const lang = options.lang || "hi-IN";
   const speed = options.speed || 1.0;
   const onStart = options.onStart || (() => {});
   const onEnd = options.onEnd || (() => {});
 
-  const cacheKey = `${text}_${voice}_${speed}`;
+  const cacheKey = `${text}_${voice}_${lang}_${speed}`;
 
   // 1. Check in-memory cache for instant 0ms playback
   if (ttsBufferCache.has(cacheKey)) {
@@ -95,12 +96,28 @@ export async function playTTSPhrase(text, options = {}) {
     return new Promise((resolve) => {
       onStart();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "hi-IN";
+      utterance.lang = lang;
       utterance.rate = speed;
+
+      try {
+        const voices = window.speechSynthesis.getVoices?.() || [];
+        const matched = voices.find((v) =>
+          v.name?.toLowerCase().includes(String(voice).toLowerCase())
+        ) || voices.find((v) => v.lang?.toLowerCase().startsWith(lang.split("-")[0].toLowerCase()));
+        if (matched) utterance.voice = matched;
+      } catch (e) {}
+
       currentUtterance = utterance;
 
+      let settled = false;
+      let hasStarted = false;
+      let startWatchdog = null;
       let safetyTimer = null;
+
       const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (startWatchdog) clearTimeout(startWatchdog);
         if (safetyTimer) clearTimeout(safetyTimer);
         isPlaying = false;
         currentUtterance = null;
@@ -108,10 +125,23 @@ export async function playTTSPhrase(text, options = {}) {
         resolve();
       };
 
+      utterance.onstart = () => {
+        hasStarted = true;
+        if (startWatchdog) clearTimeout(startWatchdog);
+      };
       utterance.onend = finish;
       utterance.onerror = finish;
 
-      // Chrome extension iframe safety: release isPlaying after at most 7s if onend fails to fire
+      // Release rapidly if Chrome iframe SpeechSynthesis stalls silently before starting
+      startWatchdog = setTimeout(() => {
+        if (!hasStarted && !window.speechSynthesis.speaking) {
+          console.warn("[Jaanch Audio Player] SpeechSynthesis did not start within 900ms; releasing VAD threshold.");
+          try { window.speechSynthesis.cancel(); } catch (e) {}
+          finish();
+        }
+      }, 900);
+
+      // Hard upper bound if onend fails to fire
       safetyTimer = setTimeout(() => {
         console.warn("[Jaanch Audio Player] SpeechSynthesis timeout safety release.");
         finish();
@@ -147,7 +177,24 @@ function playDecodedBuffer(buffer, onStart, onEnd) {
   });
 }
 
-// Backward compatibility for existing test suites
+// Sequential local clip & pause playback (zero network calls)
 export async function playAudioSequence(sequence, callbacks = {}) {
   stopAudioPlayback();
+  if (!Array.isArray(sequence) || sequence.length === 0) return;
+
+  isPlaying = true;
+  callbacks.onStart?.();
+  try {
+    for (const step of sequence) {
+      if (!isPlaying) break;
+      if (step?.type === "pause" && step.ms > 0) {
+        await new Promise((r) => setTimeout(r, step.ms));
+      } else if (step?.type === "text" && step.text) {
+        await playTTSPhrase(step.text, step.options || {});
+      }
+    }
+  } finally {
+    isPlaying = false;
+    callbacks.onEnd?.();
+  }
 }

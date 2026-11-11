@@ -7,14 +7,21 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
+import proxy.main as proxy_main
 from proxy.main import app, budget_guard
+from proxy.speech.adapter import FixtureGnaniAdapter
 from proxy.speech.wav_util import wav_from_pcm
 
 
+FIXTURES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "proxy", "fixtures"))
+
+
 @pytest.fixture
-def client():
-    # Reset budget for clean test state
+def client(monkeypatch):
+    # Guarantee isolated deterministic fixture replay regardless of local .env settings
     budget_guard.reset()
+    monkeypatch.setattr(proxy_main, "GNANI_MODE", "fixture")
+    monkeypatch.setattr(proxy_main, "speech_adapter", FixtureGnaniAdapter(fixtures_dir=FIXTURES_DIR))
     return TestClient(app)
 
 
@@ -83,6 +90,18 @@ def test_stt_oversize_audio_rejected(client):
     )
     assert response.status_code == 400
     assert "exceeds maximum allowed" in response.json()["detail"]
+    # Oversize/invalid WAV must be rejected before deducting credits
+    assert budget_guard.get_status()["used"] == 0.0
+
+
+def test_cors_localhost_and_extension_origin(client):
+    res_local = client.get("/health", headers={"Origin": "http://127.0.0.1:5173"})
+    assert res_local.status_code == 200
+    assert res_local.headers.get("access-control-allow-origin") == "http://127.0.0.1:5173"
+
+    res_ext = client.get("/health", headers={"Origin": "chrome-extension://abcdefghijklmnop"})
+    assert res_ext.status_code == 200
+    assert res_ext.headers.get("access-control-allow-origin") == "chrome-extension://abcdefghijklmnop"
 
 
 def test_session_budget_cap_enforcement(client):

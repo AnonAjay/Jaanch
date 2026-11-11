@@ -5,8 +5,7 @@
   "description": "Zero-latency spoken Hindi read-back and voice verification for cyber cafe and kiosk form-filling across actual live portals with live data.",
   "permissions": [
     "storage",
-    "alarms",
-    "webNavigation"
+    "alarms"
   ],
   "host_permissions": [
     "http://localhost:*/*",

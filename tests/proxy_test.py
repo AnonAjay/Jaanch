@@ -80,12 +80,15 @@ class TestWavUtils(unittest.TestCase):
         validate_stt_audio(valid_wav, max_duration_sec=25.0)
 
 
+FIXTURES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "proxy", "fixtures"))
+
+
 class TestFixtureAdapter(unittest.IsolatedAsyncioTestCase):
     async def test_fixture_miss_raises_error(self):
         pcm = b"\x01\x02" * 16000  # 1 sec audio
         wav = wav_from_pcm(pcm, rate=16000, ch=1, bits=16)
 
-        adapter = FixtureGnaniAdapter(fixtures_dir="proxy/fixtures")
+        adapter = FixtureGnaniAdapter(fixtures_dir=FIXTURES_DIR)
         # Invariant: Never invent text on a fixture miss!
         with self.assertRaises(FixtureNotFoundError):
             await adapter.stt(wav)
@@ -94,7 +97,7 @@ class TestFixtureAdapter(unittest.IsolatedAsyncioTestCase):
         pcm = b"\x01\x02" * 16000
         wav = wav_from_pcm(pcm, rate=16000, ch=1, bits=16)
 
-        adapter = FixtureGnaniAdapter(fixtures_dir="proxy/fixtures")
+        adapter = FixtureGnaniAdapter(fixtures_dir=FIXTURES_DIR)
         os.environ["MOCK_FIXTURE_KEY"] = "sahi_hai"
         try:
             res = await adapter.stt(wav)

@@ -19,11 +19,21 @@ let silenceTimer = null;
 let maxTimeoutTimer = null;
 
 // Continuous Listening State
+const PRE_ROLL_CHUNKS = 4;
+const MAX_UTTERANCE_SAMPLES_16K = 16000 * 15; // 15s max to stay well below /stt 25s limit
+const MIN_UTTERANCE_SAMPLES_16K = 2400; // 150ms minimum utterance
+
 let continuousActive = false;
 let isPaused = false;
 let continuousSpeechActive = false;
 let continuousSilenceTimer = null;
 let continuousBuffer = [];
+let preRollBuffers = [];
+let onSpeechStartCb = () => {};
+let onSpeechEndCb = () => {};
+let onLevelChangeCb = () => {};
+let isAudioPlayingCb = () => false;
+let continuousSilenceSec = 0.65;
 
 function downsampleTo16k(inputData, inputSampleRate) {
   if (inputSampleRate === 16000) return inputData;
@@ -86,20 +96,64 @@ function encode16kWavBlob(samples) {
  * Triggers onSpeechStart() the moment human speech begins (caller cuts off TTS).
  * Triggers onSpeechEnd(wavBlob) once complete utterance has ended.
  */
+function flushContinuousUtterance(onSpeechEnd) {
+  if (!continuousSpeechActive) return;
+  continuousSpeechActive = false;
+  if (continuousSilenceTimer) {
+    clearTimeout(continuousSilenceTimer);
+    continuousSilenceTimer = null;
+  }
+
+  if (continuousBuffer.length >= MIN_UTTERANCE_SAMPLES_16K) {
+    const wavBlob = encode16kWavBlob(continuousBuffer);
+    console.log(`[Jaanch VAD Debug] Speech utterance completed (${wavBlob.size} bytes). Delivering to STT.`);
+    continuousBuffer = [];
+    preRollBuffers = [];
+    onSpeechEnd(wavBlob);
+  } else {
+    continuousBuffer = [];
+  }
+}
+
+export function updateContinuousCallbacks(options = {}) {
+  if (options.onSpeechStart) onSpeechStartCb = options.onSpeechStart;
+  if (options.onSpeechEnd) onSpeechEndCb = options.onSpeechEnd;
+  if (options.onLevelChange) onLevelChangeCb = options.onLevelChange;
+  if (options.isAudioPlayingRef) isAudioPlayingCb = options.isAudioPlayingRef;
+  if (options.silenceTimeoutSec) continuousSilenceSec = options.silenceTimeoutSec;
+}
+
 export async function startContinuousListening(options = {}) {
-  const onSpeechStart = options.onSpeechStart || (() => {});
-  const onSpeechEnd = options.onSpeechEnd || (() => {});
-  const onLevelChange = options.onLevelChange || (() => {});
-  const isAudioPlayingRef = options.isAudioPlayingRef || (() => false);
-  const silenceTimeoutSec = options.silenceTimeoutSec || 0.65;
+  updateContinuousCallbacks(options);
+
+  const hasLiveStream = Boolean(
+    mediaStream &&
+      mediaStream.active &&
+      (!mediaStream.getAudioTracks || mediaStream.getAudioTracks().some((t) => t.readyState === "live"))
+  );
+
+  // Reuse active Web Audio graph across field navigation / focus switches instead of tearing down AudioContext
+  if (continuousActive && hasLiveStream && scriptProcessor && audioContext && audioContext.state !== "closed") {
+    isPaused = false;
+    await resumeVadAudioContext();
+    return {
+      pause: () => pauseContinuousListening(),
+      resume: () => resumeContinuousListening(),
+      stop: () => {
+        continuousActive = false;
+        cancelVoiceCapture();
+      }
+    };
+  }
 
   cancelVoiceCapture();
   continuousActive = true;
   isPaused = false;
   continuousSpeechActive = false;
   continuousBuffer = [];
+  preRollBuffers = [];
 
-  if (!mediaStream || !mediaStream.active || (mediaStream.getAudioTracks && mediaStream.getAudioTracks().every(t => t.readyState === "ended"))) {
+  if (!hasLiveStream) {
     mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
@@ -108,18 +162,21 @@ export async function startContinuousListening(options = {}) {
         autoGainControl: true
       }
     });
+    if (mediaStream?.getAudioTracks) {
+      mediaStream.getAudioTracks().forEach((track) => {
+        track.addEventListener("ended", () => {
+          console.warn("[Jaanch VAD Debug] Microphone track ended.");
+          continuousActive = false;
+          cleanUpAudioNodes();
+        });
+      });
+    }
   }
 
   if (!audioContext || audioContext.state === "closed") {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
   }
-  if (audioContext.state === "suspended") {
-    try {
-      await audioContext.resume();
-    } catch (e) {
-      console.warn("[Jaanch VAD Debug] AudioContext resume failed:", e);
-    }
-  }
+  await resumeVadAudioContext();
 
   cleanUpAudioNodes();
 
@@ -145,19 +202,27 @@ export async function startContinuousListening(options = {}) {
       sum += input[i] * input[i];
     }
     const rms = Math.sqrt(sum / input.length);
-    onLevelChange(rms);
+    onLevelChangeCb(rms);
 
     // Dynamic sensitivity: If TTS is actively speaking, require higher threshold (0.035) for barge-in cutoff
     // When idle/listening, use sensitive threshold (0.008) so normal speaking volume is reliably detected
-    const isPlaying = isAudioPlayingRef();
+    const isPlaying = isAudioPlayingCb();
     const threshold = isPlaying ? 0.035 : 0.008;
+    const resampled = downsampleTo16k(input, audioContext.sampleRate);
 
     if (rms > threshold) {
       if (!continuousSpeechActive) {
         continuousSpeechActive = true;
         continuousBuffer = [];
+        // Prepend pre-roll chunks so initial syllables ("हाँ", "नहीं") are never clipped
+        for (const chunk of preRollBuffers) {
+          for (let i = 0; i < chunk.length; i++) {
+            continuousBuffer.push(chunk[i]);
+          }
+        }
+        preRollBuffers = [];
         console.log(`[Jaanch VAD Debug] Human speech detected (RMS: ${rms.toFixed(4)} > ${threshold}). Triggering onSpeechStart.`);
-        onSpeechStart(); // Instantly cuts off TTS!
+        onSpeechStartCb(); // Instantly cuts off TTS!
       }
       if (continuousSilenceTimer) {
         clearTimeout(continuousSilenceTimer);
@@ -166,27 +231,25 @@ export async function startContinuousListening(options = {}) {
     }
 
     if (continuousSpeechActive) {
-      const resampled = downsampleTo16k(input, audioContext.sampleRate);
       for (let i = 0; i < resampled.length; i++) {
         continuousBuffer.push(resampled[i]);
       }
 
+      // Enforce hard cap (15s) to stay safely below proxy's 25s limit
+      if (continuousBuffer.length >= MAX_UTTERANCE_SAMPLES_16K) {
+        flushContinuousUtterance(onSpeechEndCb);
+        return;
+      }
+
       if (rms <= threshold && !continuousSilenceTimer) {
         continuousSilenceTimer = setTimeout(() => {
-          if (!continuousSpeechActive) return;
-          continuousSpeechActive = false;
-          continuousSilenceTimer = null;
-
-          // If utterance is >= 150ms (2400 samples at 16kHz), deliver clean speech blob
-          if (continuousBuffer.length >= 2400) {
-            const wavBlob = encode16kWavBlob(continuousBuffer);
-            console.log(`[Jaanch VAD Debug] Speech utterance completed (${wavBlob.size} bytes). Delivering to Gnani STT.`);
-            continuousBuffer = [];
-            onSpeechEnd(wavBlob);
-          } else {
-            continuousBuffer = [];
-          }
-        }, silenceTimeoutSec * 1000);
+          flushContinuousUtterance(onSpeechEndCb);
+        }, continuousSilenceSec * 1000);
+      }
+    } else {
+      preRollBuffers.push(resampled);
+      if (preRollBuffers.length > PRE_ROLL_CHUNKS) {
+        preRollBuffers.shift();
       }
     }
   };
@@ -195,18 +258,8 @@ export async function startContinuousListening(options = {}) {
   scriptProcessor.connect(audioContext.destination);
 
   return {
-    pause: () => {
-      isPaused = true;
-      continuousSpeechActive = false;
-      continuousBuffer = [];
-      if (continuousSilenceTimer) clearTimeout(continuousSilenceTimer);
-    },
-    resume: () => {
-      isPaused = false;
-      continuousSpeechActive = false;
-      continuousBuffer = [];
-      resumeVadAudioContext();
-    },
+    pause: () => pauseContinuousListening(),
+    resume: () => resumeContinuousListening(),
     stop: () => {
       continuousActive = false;
       cancelVoiceCapture();
@@ -218,32 +271,47 @@ export function pauseContinuousListening() {
   isPaused = true;
   continuousSpeechActive = false;
   continuousBuffer = [];
-  if (continuousSilenceTimer) clearTimeout(continuousSilenceTimer);
+  preRollBuffers = [];
+  if (continuousSilenceTimer) {
+    clearTimeout(continuousSilenceTimer);
+    continuousSilenceTimer = null;
+  }
 }
 
-export function resumeContinuousListening() {
+export async function resumeContinuousListening() {
   isPaused = false;
   continuousSpeechActive = false;
   continuousBuffer = [];
-  resumeVadAudioContext();
+  preRollBuffers = [];
+  return resumeVadAudioContext();
 }
 
 /**
  * Explicitly resumes the VAD's internal AudioContext if suspended by Chrome autoplay policy.
  */
-export function resumeVadAudioContext() {
-  if (typeof window === "undefined") return;
+export async function resumeVadAudioContext() {
+  if (typeof window === "undefined") return false;
   try {
-    if (audioContext && audioContext.state === "suspended") {
-      audioContext.resume().then(() => {
-        console.log("[Jaanch VAD Debug] VAD AudioContext resumed successfully.");
-      }).catch((e) => {
-        console.warn("[Jaanch VAD Debug] Failed to resume VAD AudioContext:", e);
-      });
+    if (audioContext && (audioContext.state === "suspended" || audioContext.state === "interrupted")) {
+      await audioContext.resume();
+      console.log("[Jaanch VAD Debug] VAD AudioContext resumed successfully.");
     }
+    return Boolean(audioContext && audioContext.state === "running");
   } catch (e) {
-    console.warn("[Jaanch VAD Debug] Error resuming VAD AudioContext:", e);
+    console.warn("[Jaanch VAD Debug] Failed to resume VAD AudioContext:", e);
+    return false;
   }
+}
+
+export function getVadState() {
+  return {
+    active: continuousActive,
+    paused: isPaused,
+    listening: isContinuousListeningActive(),
+    speaking: continuousSpeechActive,
+    audioContextState: audioContext ? audioContext.state : "uninitialized",
+    hasMicStream: Boolean(mediaStream && mediaStream.active),
+  };
 }
 
 /**
@@ -346,6 +414,7 @@ export function cancelVoiceCapture() {
   speechDetected = false;
   pcmSamples = [];
   continuousBuffer = [];
+  preRollBuffers = [];
 
   if (silenceTimer) clearTimeout(silenceTimer);
   if (continuousSilenceTimer) clearTimeout(continuousSilenceTimer);

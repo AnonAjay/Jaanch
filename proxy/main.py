@@ -51,14 +51,27 @@ logger = logging.getLogger("jaanch.proxy")
 
 app = FastAPI(title="Jaanch Speech Proxy", version="0.1.0")
 
-# CORS setup
+# CORS setup: explicit origin match + safe localhost / extension regex (avoids invalid wildcard+credentials combination)
+_allowed_origins = []
+if ALLOWED_ORIGIN and ALLOWED_ORIGIN != "*":
+    _allowed_origins = [o.strip() for o in ALLOWED_ORIGIN.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ALLOWED_ORIGIN, "http://localhost:*", "http://127.0.0.1:*"],
-    allow_credentials=True,
+    allow_origins=_allowed_origins,
+    allow_origin_regex=r"^(chrome-extension://[a-z0-9_-]+|https?://(localhost|127\.0\.0\.1)(:\d+)?)$",
+    allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_private_network_header(request: Request, call_next):
+    response = await call_next(request)
+    if request.headers.get("access-control-request-private-network") == "true":
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
 
 # Initialize Budget Guard and Speech Adapter
 budget_guard = BudgetGuard(
@@ -124,13 +137,13 @@ async def stt(
     session_id = x_session_id or "default"
 
     try:
-        # 1. Budget & session cap check
-        is_live = (GNANI_MODE in ("live", "record")) or (GNANI_MODE == "auto" and bool(GNANI_API_KEY))
-        budget_guard.check_and_charge(session_id=session_id, is_live=is_live)
-
-        # 2. Read and validate audio
+        # 1. Read and validate audio BEFORE deducting from daily/session budget
         audio_bytes = await audio_file.read()
         validate_stt_audio(audio_bytes, max_duration_sec=25.0)
+
+        # 2. Budget & session cap check
+        is_live = (GNANI_MODE in ("live", "record")) or (GNANI_MODE == "auto" and bool(GNANI_API_KEY))
+        budget_guard.check_and_charge(session_id=session_id, is_live=is_live)
 
         # 3. Call adapter
         result = await speech_adapter.stt(audio_bytes, language_code=language_code)
@@ -173,4 +186,4 @@ async def tts(req: TTSRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

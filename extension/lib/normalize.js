@@ -98,6 +98,20 @@ export function parseDate(str) {
     return formatParsedDate(rawDay, rawMonth, year);
   }
 
+  // 1b. Check ISO format YYYY-MM-DD (used by HTML <input type="date">)
+  const isoMatch = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const month = parseInt(isoMatch[2], 10);
+    const day = parseInt(isoMatch[3], 10);
+
+    if (!isValidDate(day, month, year)) {
+      return null;
+    }
+
+    return formatParsedDate(day, month, year);
+  }
+
   // 2. Check textual month formats: e.g. "12 Mar 1978", "12 March 1978", "12 मार्च 1978"
   // Normalize whitespace and split
   const tokens = s.split(/[\s,\-\/\.]+/).filter(Boolean);
